@@ -1,0 +1,4 @@
+# Standard ignores for Node.js projects
+node_modules/
+.env
+build/
