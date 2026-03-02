@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: crm-lentini-backend
+    env: node
+    region: frankfurt
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crm-lentini-db
+          property: connectionString
+      - key: FRONTEND_URL
+        value: https://crm-lentini.netlify.app
+
+databases:
+  - name: crm-lentini-db
+    region: frankfurt
+    plan: free
+    databaseName: crmlentini
+    user: crmlentini
