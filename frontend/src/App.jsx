@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import Clienti from './pages/Clienti.jsx'
 import Attivita from './pages/Attivita.jsx'
 import Trattative from './pages/Trattative.jsx'
+import Profilo from './pages/Profilo.jsx'
 import Layout from './components/Layout.jsx'
 
 function PrivateRoute({ children }) {
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="clienti" element={<Clienti />} />
           <Route path="attivita" element={<Attivita />} />
           <Route path="trattative" element={<Trattative />} />
+          <Route path="profilo" element={<Profilo />} />
         </Route>
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
