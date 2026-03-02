@@ -1,6 +1,6 @@
 import express from 'express'
 import { DataTypes } from 'sequelize'
-import { sequelize } from '../server.js'
+import { sequelize } from '../db.js'
 import { authMiddleware } from './auth.js'
 
 const router = express.Router()
@@ -54,7 +54,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     await c.update(req.body)
     res.json(c)
   } catch {
-    res.status(500).json({ message: 'Errore nell aggiornamento' })
+    res.status(500).json({ message: 'Errore aggiornamento' })
   }
 })
 
@@ -66,7 +66,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     await c.destroy()
     res.json({ message: 'Cliente eliminato' })
   } catch {
-    res.status(500).json({ message: 'Errore nell eliminazione' })
+    res.status(500).json({ message: 'Errore eliminazione' })
   }
 })
 
