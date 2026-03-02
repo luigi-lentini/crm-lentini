@@ -59,4 +59,20 @@ router.post('/login', async (req, res) => {
   }
 })
 
+// PUT /api/auth/change-password
+router.put('/change-password', authMiddleware, async (req, res) => {
+  try {
+    const { passwordAttuale, nuovaPassword } = req.body
+    const user = await User.findByPk(req.user.id)
+    if (!user) return res.status(404).json({ message: 'Utente non trovato' })
+    const valid = await bcrypt.compare(passwordAttuale, user.password)
+    if (!valid) return res.status(401).json({ message: 'Password attuale non corretta' })
+    const hash = await bcrypt.hash(nuovaPassword, 12)
+    await user.update({ password: hash })
+    res.json({ message: 'Password aggiornata con successo' })
+  } catch {
+    res.status(500).json({ message: 'Errore nel cambio password' })
+  }
+})
+
 export default router
