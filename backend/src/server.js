@@ -13,12 +13,12 @@ import trattativeRoutes from './routes/trattative.js'
 dotenv.config()
 
 const app = express()
-const PORT = process.env.PORT || 3001
+const PORT = parseInt(process.env.PORT) || 3001
 
 // Middleware
 app.use(helmet())
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || '*',
   credentials: true
 }))
 app.use(express.json())
@@ -27,8 +27,7 @@ app.use(express.urlencoded({ extended: true }))
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Troppe richieste, riprova tra poco'
+  max: 100
 })
 app.use('/api/', limiter)
 
@@ -39,27 +38,19 @@ app.use('/api/attivita', attivitaRoutes)
 app.use('/api/trattative', trattativeRoutes)
 
 // Health check
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
+app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
 // 404
 app.use((req, res) => res.status(404).json({ message: 'Route non trovata' }))
 
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack)
-  res.status(500).json({ message: 'Errore interno del server' })
+// Avvia server immediatamente, poi connette DB
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server avviato sulla porta ${PORT}`)
+  sequelize.authenticate()
+    .then(() => {
+      console.log('Database connesso')
+      return sequelize.sync({ force: false })
+    })
+    .then(() => console.log('Tabelle sincronizzate'))
+    .catch(err => console.error('Errore DB:', err.message))
 })
-
-// Start server
-sequelize.authenticate()
-  .then(() => {
-    console.log('Database connesso')
-    return sequelize.sync({ force: false })
-  })
-  .then(() => {
-    app.listen(PORT, () => console.log(`Server avviato sulla porta ${PORT}`))
-  })
-  .catch(err => {
-    console.error('Errore connessione database:', err)
-    process.exit(1)
-  })
