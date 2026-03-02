@@ -4,7 +4,8 @@ import {
   UsersIcon,
   ClipboardDocumentListIcon,
   BriefcaseIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  UserCircleIcon
 } from '@heroicons/react/24/outline'
 
 const navItems = [
@@ -12,6 +13,7 @@ const navItems = [
   { to: '/clienti', label: 'Clienti', icon: UsersIcon },
   { to: '/attivita', label: 'Attivita', icon: ClipboardDocumentListIcon },
   { to: '/trattative', label: 'Trattative', icon: BriefcaseIcon },
+  { to: '/profilo', label: 'Profilo', icon: UserCircleIcon },
 ]
 
 export default function Layout() {
