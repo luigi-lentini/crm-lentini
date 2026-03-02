@@ -88,6 +88,7 @@ export default function Agenda() {
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => { setForm(item); setEditing(item.id) }} className="text-blue-600 hover:underline text-sm">Modifica</button>
+                                            <button onClick={() => item.note ? toast(item.note, { duration: 5000 }) : toast('Nessuna nota')} className="text-green-600 hover:underline text-sm">Note</button>
                       <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:underline text-sm">Elimina</button>
                     </div>
                   </div>
