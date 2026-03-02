@@ -3,7 +3,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 import dotenv from 'dotenv'
 import rateLimit from 'express-rate-limit'
-import { Sequelize } from 'sequelize'
+import { sequelize } from './db.js'
 
 import authRoutes from './routes/auth.js'
 import clientiRoutes from './routes/clienti.js'
@@ -32,18 +32,6 @@ const limiter = rateLimit({
 })
 app.use('/api/', limiter)
 
-// Database
-export const sequelize = new Sequelize(
-  process.env.DATABASE_URL || `postgresql://${process.env.DB_USER}:${process.env.DB_PASS}@${process.env.DB_HOST}:5432/${process.env.DB_NAME}`,
-  {
-    dialect: 'postgres',
-    logging: false,
-    dialectOptions: process.env.DATABASE_URL ? {
-      ssl: { require: true, rejectUnauthorized: false }
-    } : {}
-  }
-)
-
 // Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/clienti', clientiRoutes)
@@ -62,11 +50,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Errore interno del server' })
 })
 
-// Start
-sequelize.sync({ alter: false }).then(() => {
-  console.log('Database connesso')
-  app.listen(PORT, () => console.log(`Server avviato su porta ${PORT}`))
-}).catch(err => {
-  console.error('Errore connessione DB:', err)
-  process.exit(1)
-})
+// Start server
+sequelize.authenticate()
+  .then(() => {
+    console.log('Database connesso')
+    return sequelize.sync({ force: false })
+  })
+  .then(() => {
+    app.listen(PORT, () => console.log(`Server avviato sulla porta ${PORT}`))
+  })
+  .catch(err => {
+    console.error('Errore connessione database:', err)
+    process.exit(1)
+  })
