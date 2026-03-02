@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'reac, note: '' })
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
 import { CalendarDaysIcon, PlusIcon } from '@heroicons/react/24/outline'
@@ -29,7 +29,7 @@ export default function Agenda() {
         await axios.post(`${import.meta.env.VITE_API_URL}/api/appuntamenti`, form, { headers: { Authorization: `Bearer ${token}` } })
         toast.success('Creato')
       }
-      setForm({ titolo: '', dataInizio: '', dataFine: '', luogo: '', tipo: 'meeting', clienteNome: '' })
+      setForm({ titolo: '', dataInizio: '', dataFine: '', luogo: '', tipo: 'meeting', clienteNome: '' , note: '' })
       setEditing(null)
       loadItems()
     } catch { toast.error('Errore salvataggio') }
@@ -67,6 +67,7 @@ export default function Agenda() {
                 <option value="visita">Visita</option>
               </select>
               <input type="text" placeholder="Nome Cliente" value={form.clienteNome} onChange={e => setForm({...form, clienteNome: e.target.value})} className="w-full border rounded-lg px-3 py-2" />
+                            <input type="text" placeholder="Note" value={form.note} onChange={(e) => setForm({...form, note: e.target.value})} className="w-full p-2 border rounded" />
               <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">Salva</button>
               {editing && <button type="button" onClick={() => { setEditing(null); setForm({ titolo: '', dataInizio: '', dataFine: '', luogo: '', tipo: 'meeting', clienteNome: '' }) }} className="w-full bg-gray-300 text-gray-700 py-2 rounded-lg">Annulla</button>}
             </form>
