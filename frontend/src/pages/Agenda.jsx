@@ -5,7 +5,7 @@ import { CalendarDaysIcon, PlusIcon } from '@heroicons/react/24/outline'
 
 export default function Agenda() {
   const [items, setItems] = useState([])
-  const [form, setForm] = useState({ titolo: '', dataInizio: '', dataFine: '', luogo: '', tipo: 'meeting', clienteNome: '' })
+  const [form, setForm] = useState({ titolo: '', dataInizio: '', dataFine: '', luogo: '', tipo: 'meeting', clienteNome: '', note: '' })
   const [editing, setEditing] = useState(null)
 
   useEffect(() => { loadItems() }, [])
