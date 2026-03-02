@@ -14,7 +14,11 @@ const navItems = [
   { to: '/attivita', label: 'Attivita', icon: ClipboardDocumentListIcon },
   { to: '/trattative', label: 'Trattative', icon: BriefcaseIcon },
   { to: '/profilo', label: 'Profilo', icon: UserCircleIcon },
-]
+],
+    { to: '/agenda', label: 'Agenda', icon: HomeIcon },
+       { to: '/todo', label: 'To-Do', icon: ClipboardDocumentListIcon },
+  { to: '/progetti', label: 'Progetti', icon: BriefcaseIcon },
+     { to: '/verifiche', label: 'Verifiche', icon: UserCircleIcon }
 
 export default function Layout() {
   const navigate = useNavigate()
