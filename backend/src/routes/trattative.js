@@ -1,6 +1,6 @@
 import express from 'express'
 import { DataTypes } from 'sequelize'
-import { sequelize } from '../server.js'
+import { sequelize } from '../db.js'
 import { authMiddleware } from './auth.js'
 
 const router = express.Router()
@@ -16,7 +16,6 @@ const Trattativa = sequelize.define('Trattativa', {
 
 Trattativa.sync({ force: false })
 
-// GET /api/trattative
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const trattative = await Trattativa.findAll({ where: { userId: req.user.id } })
@@ -26,11 +25,10 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 })
 
-// GET /api/trattative/count
 router.get('/count', authMiddleware, async (req, res) => {
   try {
     const count = await Trattativa.count({
-      where: { userId: req.user.id, fase: ['contatto', 'proposta', 'negoziazione'] }
+      where: { userId: req.user.id }
     })
     res.json({ count })
   } catch {
@@ -38,7 +36,6 @@ router.get('/count', authMiddleware, async (req, res) => {
   }
 })
 
-// POST /api/trattative
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const t = await Trattativa.create({ ...req.body, userId: req.user.id })
@@ -48,7 +45,6 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 })
 
-// PUT /api/trattative/:id
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const t = await Trattativa.findOne({ where: { id: req.params.id, userId: req.user.id } })
@@ -56,11 +52,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
     await t.update(req.body)
     res.json(t)
   } catch {
-    res.status(500).json({ message: 'Errore nell aggiornamento' })
+    res.status(500).json({ message: 'Errore aggiornamento' })
   }
 })
 
-// DELETE /api/trattative/:id
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const t = await Trattativa.findOne({ where: { id: req.params.id, userId: req.user.id } })
@@ -68,7 +63,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     await t.destroy()
     res.json({ message: 'Trattativa eliminata' })
   } catch {
-    res.status(500).json({ message: 'Errore nell eliminazione' })
+    res.status(500).json({ message: 'Errore eliminazione' })
   }
 })
 
