@@ -2,7 +2,7 @@ import express from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { DataTypes } from 'sequelize'
-import { sequelize } from '../server.js'
+import { sequelize } from '../db.js'
 
 const router = express.Router()
 
@@ -56,16 +56,6 @@ router.post('/login', async (req, res) => {
     res.json({ token, user: { id: user.id, nome: user.nome, email: user.email } })
   } catch {
     res.status(500).json({ message: 'Errore nel login' })
-  }
-})
-
-// GET /api/auth/me
-router.get('/me', authMiddleware, async (req, res) => {
-  try {
-    const user = await User.findByPk(req.user.id, { attributes: { exclude: ['password'] } })
-    res.json(user)
-  } catch {
-    res.status(500).json({ message: 'Errore' })
   }
 })
 
