@@ -1,6 +1,6 @@
 import express from 'express'
 import { DataTypes } from 'sequelize'
-import { sequelize } from '../server.js'
+import { sequelize } from '../db.js'
 import { authMiddleware } from './auth.js'
 
 const router = express.Router()
@@ -15,7 +15,6 @@ const Attivita = sequelize.define('Attivita', {
 
 Attivita.sync({ force: false })
 
-// GET /api/attivita
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const attivita = await Attivita.findAll({ where: { userId: req.user.id }, order: [['scadenza', 'ASC']] })
@@ -25,7 +24,6 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 })
 
-// GET /api/attivita/count
 router.get('/count', authMiddleware, async (req, res) => {
   try {
     const count = await Attivita.count({ where: { userId: req.user.id, stato: 'da_fare' } })
@@ -35,7 +33,6 @@ router.get('/count', authMiddleware, async (req, res) => {
   }
 })
 
-// GET /api/attivita/today
 router.get('/today', authMiddleware, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0]
@@ -46,7 +43,6 @@ router.get('/today', authMiddleware, async (req, res) => {
   }
 })
 
-// POST /api/attivita
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const a = await Attivita.create({ ...req.body, userId: req.user.id })
@@ -56,7 +52,6 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 })
 
-// PUT /api/attivita/:id
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const a = await Attivita.findOne({ where: { id: req.params.id, userId: req.user.id } })
@@ -64,11 +59,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
     await a.update(req.body)
     res.json(a)
   } catch {
-    res.status(500).json({ message: 'Errore nell aggiornamento' })
+    res.status(500).json({ message: 'Errore aggiornamento' })
   }
 })
 
-// DELETE /api/attivita/:id
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const a = await Attivita.findOne({ where: { id: req.params.id, userId: req.user.id } })
@@ -76,7 +70,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     await a.destroy()
     res.json({ message: 'Attivita eliminata' })
   } catch {
-    res.status(500).json({ message: 'Errore nell eliminazione' })
+    res.status(500).json({ message: 'Errore eliminazione' })
   }
 })
 
