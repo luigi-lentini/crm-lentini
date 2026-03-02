@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { PlusIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon } from '@heroicons/react/24/outline'
 
 const FASI = ['contatto', 'proposta', 'negoziazione', 'chiusa_vinta', 'chiusa_persa']
 
@@ -9,6 +9,7 @@ export default function Trattative() {
   const [trattative, setTrattative] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState({ titolo: '', valore: '', fase: 'contatto', note: '' })
 
   const token = localStorage.getItem('token')
@@ -30,14 +31,26 @@ export default function Trattative() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      await axios.post('/api/trattative', form, { headers })
-      toast.success('Trattativa aggiunta!')
+      if (editingId) {
+        await axios.put(`/api/trattative/${editingId}`, form, { headers })
+        toast.success('Trattativa aggiornata!')
+        setEditingId(null)
+      } else {
+        await axios.post('/api/trattative', form, { headers })
+        toast.success('Trattativa aggiunta!')
+      }
       setShowForm(false)
       setForm({ titolo: '', valore: '', fase: 'contatto', note: '' })
       fetchTrattative()
     } catch {
       toast.error('Errore nel salvataggio')
     }
+  }
+
+  const handleEdit = (t) => {
+    setForm({ titolo: t.titolo, valore: t.valore, fase: t.fase, note: t.note || '' })
+    setEditingId(t.id)
+    setShowForm(true)
   }
 
   const faseColor = (fase) => ({
@@ -64,11 +77,12 @@ export default function Trattative() {
                 <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Titolo</th>
                 <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Valore</th>
                 <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Fase</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Azioni</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {trattative.length === 0 ? (
-                <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-400">Nessuna trattativa</td></tr>
+                <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400">Nessuna trattativa</td></tr>
               ) : trattative.map(t => (
                 <tr key={t.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 font-medium">{t.titolo}</td>
@@ -77,6 +91,11 @@ export default function Trattative() {
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${faseColor(t.fase)}`}>
                       {t.fase?.replace(/_/g, ' ')}
                     </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <button onClick={() => handleEdit(t)} className="text-blue-600 hover:text-blue-800">
+                      <PencilIcon className="w-5 h-5" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -87,7 +106,7 @@ export default function Trattative() {
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">Nuova Trattativa</h3>
+            <h3 className="text-lg font-bold mb-4">{editingId ? 'Modifica Trattativa' : 'Nuova Trattativa'}</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <input placeholder="Titolo" value={form.titolo} onChange={e => setForm({...form, titolo: e.target.value})} className="input-field" required />
               <input placeholder="Valore (EUR)" type="number" value={form.valore} onChange={e => setForm({...form, valore: e.target.value})} className="input-field" />
@@ -96,7 +115,7 @@ export default function Trattative() {
               </select>
               <textarea placeholder="Note" value={form.note} onChange={e => setForm({...form, note: e.target.value})} className="input-field" rows={3} />
               <div className="flex gap-3 justify-end">
-                <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Annulla</button>
+                <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setForm({ titolo: '', valore: '', fase: 'contatto', note: '' }) }} className="btn-secondary">Annulla</button>
                 <button type="submit" className="btn-primary">Salva</button>
               </div>
             </form>
