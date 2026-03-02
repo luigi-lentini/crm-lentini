@@ -47,7 +47,7 @@ app.listen(PORT, '0.0.0.0', () => {
   sequelize.authenticate()
     .then(() => {
       console.log('Database connesso')
-      return sequelize.sync({ force: false })
+      return sequelize.sync({ alter: true })
     })
     .then(() => console.log('Tabelle sincronizzate'))
     .catch(err => console.error('Errore DB:', err.message))
