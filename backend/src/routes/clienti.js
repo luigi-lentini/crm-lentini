@@ -46,6 +46,41 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 })
 
+// POST /api/clienti/import - Import bulk da CSV
+router.post('/import', authMiddleware, async (req, res) => {
+  try {
+    const { clienti } = req.body
+    if (!Array.isArray(clienti) || clienti.length === 0) {
+      return res.status(400).json({ message: 'Nessun dato da importare' })
+    }
+    const risultati = { importati: 0, saltati: 0, errori: [] }
+    for (const c of clienti) {
+      if (!c.nome || !c.cognome) {
+        risultati.saltati++
+        risultati.errori.push(`Riga saltata: nome o cognome mancante (${c.email || ''})`)
+        continue
+      }
+      try {
+        await Cliente.create({
+          nome: c.nome || '',
+          cognome: c.cognome || '',
+          email: c.email || '',
+          telefono: c.telefono || '',
+          note: c.note || '',
+          userId: req.user.id
+        })
+        risultati.importati++
+      } catch {
+        risultati.saltati++
+        risultati.errori.push(`Errore importazione: ${c.email || c.nome}`)
+      }
+    }
+    res.status(201).json(risultati)
+  } catch {
+    res.status(500).json({ message: 'Errore durante l\'importazione' })
+  }
+})
+
 // PUT /api/clienti/:id
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
