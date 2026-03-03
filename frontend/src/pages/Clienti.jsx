@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { PlusIcon, MagnifyingGlassIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline'
-
+import { PlusIcon, MagnifyingGlassIcon, ArrowUpTrayIcon, EyeIcon } from '@heroicons/react/24/outline'
 import { useNavigate } from 'react-router-dom'
+
 export default function Clienti() {
-    const navigate = useNavigate()
+  const navigate = useNavigate()
   const [clienti, setClienti] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -51,7 +51,8 @@ export default function Clienti() {
     const reader = new FileReader()
     reader.onload = (ev) => {
       const text = ev.target.result
-      const lines = text.split('\n').filter(l => l.trim())
+      const lines = text.split('
+').filter(l => l.trim())
       if (lines.length < 2) {
         toast.error('File CSV vuoto o non valido')
         return
@@ -74,10 +75,6 @@ export default function Clienti() {
           note: mappaColonne.note !== undefined ? cols[mappaColonne.note] || '' : ''
         }
       }).filter(r => r.nome || r.cognome || r.email)
-      if (rows.length === 0) {
-        toast.error('Nessun dato valido trovato nel file')
-        return
-      }
       setCsvPreview(rows)
       setShowImport(true)
     }
@@ -90,7 +87,7 @@ export default function Clienti() {
     setImporting(true)
     try {
       const { data } = await axios.post('/api/clienti/import', { clienti: csvPreview }, { headers })
-      toast.success(`Importati ${data.importati} clienti${data.saltati > 0 ? `, ${data.saltati} saltati` : ''}`)
+      toast.success(`Importati ${data.importati} clienti`)
       setShowImport(false)
       setCsvPreview([])
       fetchClienti()
@@ -141,17 +138,26 @@ export default function Clienti() {
                 <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Nome</th>
                 <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Email</th>
                 <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Telefono</th>
+                <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">Azioni</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
-                <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-400">Nessun cliente trovato</td></tr>
+                <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400">Nessun cliente trovato</td></tr>
               ) : (
                 filtered.map((c) => (
-                  <tr key={c.id} c onClick={() => navigate(` cursor-pointer/clienti/${c.id}`)}lassName="hover:bg-gray-50">
+                  <tr key={c.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/clienti/${c.id}`)}>
                     <td className="px-6 py-4 font-medium">{c.nome} {c.cognome}</td>
                     <td className="px-6 py-4 text-gray-500">{c.email}</td>
                     <td className="px-6 py-4 text-gray-500">{c.telefono}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); navigate(`/clienti/${c.id}`) }}
+                        className="btn-secondary py-1 px-3 text-xs flex items-center gap-1 ml-auto"
+                      >
+                        <EyeIcon className="w-3 h-3" /> Vedi/Modifica
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -184,32 +190,27 @@ export default function Clienti() {
       {showImport && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 w-full max-w-3xl max-h-[80vh] flex flex-col">
-            <h3 className="text-lg font-bold mb-2">Anteprima importazione CSV</h3>
-            <p className="text-sm text-gray-500 mb-4">{csvPreview.length} clienti trovati nel file. Verifica i dati e conferma.</p>
+            <h3 className="text-lg font-bold mb-2">Anteprima importazione</h3>
             <div className="overflow-auto flex-1 border rounded-lg">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
-                    <th className="text-left px-4 py-2 text-gray-500">Nome</th>
-                    <th className="text-left px-4 py-2 text-gray-500">Cognome</th>
-                    <th className="text-left px-4 py-2 text-gray-500">Email</th>
-                    <th className="text-left px-4 py-2 text-gray-500">Telefono</th>
+                    <th className="text-left px-4 py-2">Nome</th>
+                    <th className="text-left px-4 py-2">Email</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody>
                   {csvPreview.map((c, i) => (
-                    <tr key={i} className={!c.nome && !c.cognome ? 'bg-red-50' : ''}>
-                      <td className="px-4 py-2">{c.nome || <span className="text-red-400">mancante</span>}</td>
-                      <td className="px-4 py-2">{c.cognome || <span className="text-red-400">mancante</span>}</td>
-                      <td className="px-4 py-2 text-gray-500">{c.email}</td>
-                      <td className="px-4 py-2 text-gray-500">{c.telefono}</td>
+                    <tr key={i} className="border-b">
+                      <td className="px-4 py-2">{c.nome} {c.cognome}</td>
+                      <td className="px-4 py-2">{c.email}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <div className="flex gap-3 justify-end mt-4">
-              <button type="button" onClick={() => { setShowImport(false); setCsvPreview([]) }} className="btn-secondary">Annulla</button>
+              <button type="button" onClick={() => setShowImport(false)} className="btn-secondary">Annulla</button>
               <button type="button" onClick={handleImport} disabled={importing} className="btn-primary">
                 {importing ? 'Importazione...' : `Importa ${csvPreview.length} clienti`}
               </button>
