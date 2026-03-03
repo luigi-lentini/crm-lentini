@@ -9,6 +9,7 @@ import Attivita from './pages/Attivita.jsx'
 import Trattative from './pages/Trattative.jsx'
 import Profilo from './pages/Profilo.jsx'
 import Agenda from './pages/Agenda.jsx'
+import AppuntamentoDettaglio from './pages/AppuntamentoDettaglio.jsx'
 import TodoList from './pages/TodoList.jsx'
 import Progetti from './pages/Progetti.jsx'
 import Verifiche from './pages/Verifiche.jsx'
@@ -33,16 +34,16 @@ export default function App() {
         }>
           <Route index element={<Dashboard />} />
           <Route path="clienti" element={<Clienti />} />
-                        <Route path="clienti/:id" element={<ClienteDettaglio />} />
+          <Route path="clienti/:id" element={<ClienteDettaglio />} />
           <Route path="attivita" element={<Attivita />} />
           <Route path="trattative" element={<Trattative />} />
           <Route path="profilo" element={<Profilo />} />
-                        <Route path="agenda" element={<Agenda />} />
-                        <Route path="todo" element={<TodoList />} />
-                        <Route path="progetti" element={<Progetti />} />
-                    <Route path="verifiche" element={<Verifiche />} />
+          <Route path="agenda" element={<Agenda />} />
+          <Route path="agenda/:id" element={<AppuntamentoDettaglio />} />
+          <Route path="todo" element={<TodoList />} />
+          <Route path="progetti" element={<Progetti />} />
+          <Route path="verifiche" element={<Verifiche />} />
         </Route>
-        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   )

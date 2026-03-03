@@ -1,105 +1,123 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import interactionPlugin from '@fullcalendar/interaction'
 import axios from 'axios'
-import { toast } from 'react-hot-toast'
-import { CalendarDaysIcon, PlusIcon } from '@heroicons/react/24/outline'
+import toast from 'react-hot-toast'
+import { PlusIcon } from '@heroicons/react/24/outline'
 
 export default function Agenda() {
-  const [items, setItems] = useState([])
-  const [form, setForm] = useState({ titolo: '', dataInizio: '', dataFine: '', luogo: '', tipo: 'meeting', clienteNome: '', note: '' })
-  const [editing, setEditing] = useState(null)
+  const [events, setEvents] = useState([])
+  const [showForm, setShowForm] = useState(false)
+  const navigate = useNavigate()
+  const [form, setForm] = useState({ 
+    titolo: '', dataInizio: '', dataFine: '', tipo: 'meeting', 
+    note_salienti: '', indirizzo: '', appuntamento_online: false 
+  })
+  const [clienti, setClienti] = useState([])
 
-  useEffect(() => { loadItems() }, [])
+  const token = localStorage.getItem('token')
+  const headers = { Authorization: `Bearer ${token}` }
 
-  const loadItems = async () => {
+  const fetchEvents = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/appuntamenti`, { headers: { Authorization: `Bearer ${token}` } })
-      setItems(res.data)
-    } catch { toast.error('Errore caricamento appuntamenti') }
+      const { data } = await axios.get('/api/appuntamenti', { headers })
+      setEvents(data.map(e => ({
+        id: e.id,
+        title: e.titolo,
+        start: e.dataInizio,
+        end: e.dataFine,
+        extendedProps: { ...e }
+      })))
+    } catch { toast.error('Errore nel caricamento') }
   }
+
+  const fetchClienti = async () => {
+    try {
+      const { data } = await axios.get('/api/clienti', { headers })
+      setClienti(data)
+    } catch { }
+  }
+
+  useEffect(() => { 
+    fetchEvents()
+    fetchClienti()
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      const token = localStorage.getItem('token')
-      if (editing) {
-        await axios.put(`${import.meta.env.VITE_API_URL}/api/appuntamenti/${editing}`, form, { headers: { Authorization: `Bearer ${token}` } })
-        toast.success('Aggiornato')
-      } else {
-        await axios.post(`${import.meta.env.VITE_API_URL}/api/appuntamenti`, form, { headers: { Authorization: `Bearer ${token}` } })
-        toast.success('Creato')
-      }
-      setForm({ titolo: '', dataInizio: '', dataFine: '', luogo: '', tipo: 'meeting', clienteNome: '' , note: '' })
-      setEditing(null)
-      loadItems()
-    } catch { toast.error('Errore salvataggio') }
-  }
-
-  const handleDelete = async (id) => {
-    if (!confirm('Eliminare?')) return
-    try {
-      const token = localStorage.getItem('token')
-      await axios.delete(`${import.meta.env.VITE_API_URL}/api/appuntamenti/${id}`, { headers: { Authorization: `Bearer ${token}` } })
-      toast.success('Eliminato')
-      loadItems()
-    } catch { toast.error('Errore eliminazione') }
+      await axios.post('/api/appuntamenti', form, { headers })
+      toast.success('Evento aggiunto!')
+      setShowForm(false)
+      fetchEvents()
+    } catch { toast.error('Errore nel salvataggio') }
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <CalendarDaysIcon className="w-8 h-8 text-blue-600" />
-        <h1 className="text-2xl font-bold text-gray-800">Agenda Appuntamenti</h1>
+    <div className="p-8 h-full flex flex-col">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Agenda</h2>
+        <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
+          <PlusIcon className="w-4 h-4" /> Nuovo Appuntamento
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">{editing ? 'Modifica' : 'Nuovo'} Appuntamento</h2>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <input type="text" placeholder="Titolo" value={form.titolo} onChange={e => setForm({...form, titolo: e.target.value})} required className="w-full border rounded-lg px-3 py-2" />
-              <input type="datetime-local" value={form.dataInizio} onChange={e => setForm({...form, dataInizio: e.target.value})} required className="w-full border rounded-lg px-3 py-2" />
-              <input type="datetime-local" value={form.dataFine} onChange={e => setForm({...form, dataFine: e.target.value})} required className="w-full border rounded-lg px-3 py-2" />
-              <input type="text" placeholder="Luogo" value={form.luogo} onChange={e => setForm({...form, luogo: e.target.value})} className="w-full border rounded-lg px-3 py-2" />
-              <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})} className="w-full border rounded-lg px-3 py-2">
-                <option value="meeting">Meeting</option>
-                <option value="call">Chiamata</option>
-                <option value="visita">Visita</option>
+      <div className="card flex-1 overflow-hidden p-4">
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          initialView="timeGridWeek"
+          headerToolbar={{
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+          }}
+          locale="it"
+          events={events}
+          height="100%"
+          eventClick={(info) => navigate(`/agenda/${info.event.id}`)}
+          selectable={true}
+          select={(info) => {
+            setForm({...form, dataInizio: info.startStr.slice(0,16), dataFine: info.endStr.slice(0,16)})
+            setShowForm(true)
+          }}
+        />
+      </div>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold mb-4">Nuovo Appuntamento</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <input placeholder="Titolo" value={form.titolo} onChange={e => setForm({...form, titolo: e.target.value})} className="input-field" required />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500">Inizio</label>
+                  <input type="datetime-local" value={form.dataInizio} onChange={e => setForm({...form, dataInizio: e.target.value})} className="input-field" required />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Fine</label>
+                  <input type="datetime-local" value={form.dataFine} onChange={e => setForm({...form, dataFine: e.target.value})} className="input-field" required />
+                </div>
+              </div>
+              <select value={form.clienteId} onChange={e => {
+                const c = clienti.find(cl => cl.id == e.target.value)
+                setForm({...form, clienteId: e.target.value, clienteNome: c ? `${c.nome} ${c.cognome}` : ''})
+              }} className="input-field">
+                <option value="">Seleziona Cliente</option>
+                {clienti.map(c => <option key={c.id} value={c.id}>{c.nome} {c.cognome}</option>)}
               </select>
-              <input type="text" placeholder="Nome Cliente" value={form.clienteNome} onChange={e => setForm({...form, clienteNome: e.target.value})} className="w-full border rounded-lg px-3 py-2" />
-                            <input type="text" placeholder="Note" value={form.note} onChange={(e) => setForm({...form, note: e.target.value})} className="w-full p-2 border rounded" />
-              <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">Salva</button>
-              {editing && <button type="button" onClick={() => { setEditing(null); setForm({ titolo: '', dataInizio: '', dataFine: '', luogo: '', tipo: 'meeting', clienteNome: '' }) }} className="w-full bg-gray-300 text-gray-700 py-2 rounded-lg">Annulla</button>}
+              <textarea placeholder="Note salienti..." value={form.note_salienti} onChange={e => setForm({...form, note_salienti: e.target.value})} className="input-field" rows={3} />
+              <div className="flex gap-3 justify-end">
+                <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Annulla</button>
+                <button type="submit" className="btn-primary">Salva</button>
+              </div>
             </form>
           </div>
         </div>
-
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Prossimi Appuntamenti</h2>
-            <div className="space-y-3">
-              {items.map(item => (
-                <div key={item.id} className="border rounded-lg p-4 hover:shadow-md transition">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold text-gray-800">{item.titolo}</h3>
-                      <p className="text-sm text-gray-600">{new Date(item.dataInizio).toLocaleString('it-IT')}</p>
-                      {item.luogo && <p className="text-sm text-gray-500">📍 {item.luogo}</p>}
-                      {item.clienteNome && <p className="text-sm text-blue-600">👤 {item.clienteNome}</p>}
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => { setForm(item); setEditing(item.id) }} className="text-blue-600 hover:underline text-sm">Modifica</button>
-                                            <button onClick={() => item.note ? toast(item.note, { duration: 5000 }) : toast('Nessuna nota')} className="text-green-600 hover:underline text-sm">Note</button>
-                      <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:underline text-sm">Elimina</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {items.length === 0 && <p className="text-gray-400 text-center py-8">Nessun appuntamento</p>}
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   )
 }
