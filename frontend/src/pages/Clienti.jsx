@@ -1,30 +1,33 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
-import toast from 'react-hot-toast'
-import { PlusIcon, MagnifyingGlassIcon, ArrowUpTrayIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { toast } from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
+import { MagnifyingGlassIcon, PlusIcon, ArrowUpTrayIcon, EyeIcon } from '@heroicons/react/24/outline'
+
+const API = import.meta.env.VITE_API_URL
 
 export default function Clienti() {
   const navigate = useNavigate()
   const [clienti, setClienti] = useState([])
-  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [showImport, setShowImport] = useState(false)
-  const [csvPreview, setCsvPreview] = useState([])
+  const [importPreview, setImportPreview] = useState([])
+  const [importRows, setImportRows] = useState([])
   const [importing, setImporting] = useState(false)
   const [form, setForm] = useState({ nome: '', cognome: '', email: '', telefono: '', note: '' })
-  const fileRef = useRef(null)
 
   const token = localStorage.getItem('token')
   const headers = { Authorization: `Bearer ${token}` }
 
   const fetchClienti = async () => {
     try {
-      const { data } = await axios.get('/api/clienti', { headers })
-      setClienti(data)
+      setLoading(true)
+      const res = await axios.get(`${API}/api/clienti`, { headers })
+      setClienti(res.data)
     } catch {
-      toast.error('Errore nel caricamento clienti')
+      toast.error('Errore nel caricamento')
     } finally {
       setLoading(false)
     }
@@ -35,7 +38,7 @@ export default function Clienti() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      await axios.post('/api/clienti', form, { headers })
+      await axios.post(`${API}/api/clienti`, form, { headers })
       toast.success('Cliente aggiunto!')
       setShowForm(false)
       setForm({ nome: '', cognome: '', email: '', telefono: '', note: '' })
@@ -51,14 +54,13 @@ export default function Clienti() {
     const reader = new FileReader()
     reader.onload = (ev) => {
       const text = ev.target.result
-      const lines = text.split('
-').filter(l => l.trim())
+      const lines = text.split('\n').filter(l => l.trim())
       if (lines.length < 2) {
         toast.error('File CSV vuoto o non valido')
         return
       }
-      const rawHeaders = lines[0].split(';').map(h => h.trim().toLowerCase().replace(/["']/g, ''))
-      const colonneAccettate = { nome: ['nome'], cognome: ['cognome'], email: ['email'], telefono: ['telefono', 'tel', 'phone'], note: ['note', 'notes'] }
+      const rawHeaders = lines[0].split(';').map(h => h.trim().toLowerCase().replace(/[""]/g, ''))
+      const colonneAccettate = { nome: ['nome'], cognome: ['cognome'], email: ['email'], telefono: ['telefono', 'tel', 'phone'], note: ['note'] }
       const mappaColonne = {}
       rawHeaders.forEach((h, i) => {
         for (const [campo, alias] of Object.entries(colonneAccettate)) {
@@ -66,7 +68,7 @@ export default function Clienti() {
         }
       })
       const rows = lines.slice(1).map(line => {
-        const cols = line.split(';').map(c => c.trim().replace(/["']/g, ''))
+        const cols = line.split(';').map(c => c.trim().replace(/[""]/g, ''))
         return {
           nome: mappaColonne.nome !== undefined ? cols[mappaColonne.nome] || '' : '',
           cognome: mappaColonne.cognome !== undefined ? cols[mappaColonne.cognome] || '' : '',
@@ -74,28 +76,31 @@ export default function Clienti() {
           telefono: mappaColonne.telefono !== undefined ? cols[mappaColonne.telefono] || '' : '',
           note: mappaColonne.note !== undefined ? cols[mappaColonne.note] || '' : ''
         }
-      }).filter(r => r.nome || r.cognome || r.email)
-      setCsvPreview(rows)
+      }).filter(r => r.nome || r.cognome)
+      setImportRows(rows)
+      setImportPreview(rows.slice(0, 5))
       setShowImport(true)
     }
-    reader.readAsText(file, 'UTF-8')
-    e.target.value = ''
+    reader.readAsText(file)
   }
 
-  const handleImport = async () => {
-    if (csvPreview.length === 0) return
+  const handleImportConfirm = async () => {
     setImporting(true)
-    try {
-      const { data } = await axios.post('/api/clienti/import', { clienti: csvPreview }, { headers })
-      toast.success(`Importati ${data.importati} clienti`)
-      setShowImport(false)
-      setCsvPreview([])
-      fetchClienti()
-    } catch {
-      toast.error('Errore durante l\'importazione')
-    } finally {
-      setImporting(false)
+    let ok = 0, err = 0
+    for (const row of importRows) {
+      try {
+        await axios.post(`${API}/api/clienti`, row, { headers })
+        ok++
+      } catch {
+        err++
+      }
     }
+    setImporting(false)
+    setShowImport(false)
+    setImportRows([])
+    setImportPreview([])
+    toast.success(`Importati ${ok} clienti${err > 0 ? `, ${err} errori` : ''}`)
+    fetchClienti()
   }
 
   const filtered = clienti.filter(c =>
@@ -103,19 +108,77 @@ export default function Clienti() {
   )
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Clienti</h2>
-        <div className="flex gap-3">
-          <input type="file" accept=".csv" ref={fileRef} onChange={handleFileChange} className="hidden" />
-          <button onClick={() => fileRef.current.click()} className="btn-secondary flex items-center gap-2">
-            <ArrowUpTrayIcon className="w-4 h-4" /> Importa CSV
-          </button>
-          <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
-            <PlusIcon className="w-4 h-4" /> Nuovo Cliente
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Clienti</h1>
+        <div className="flex gap-2">
+          <label className="btn-secondary flex items-center gap-1 cursor-pointer text-sm py-2 px-3">
+            <ArrowUpTrayIcon className="w-4 h-4" />
+            Importa CSV
+            <input type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
+          </label>
+          <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-1 text-sm">
+            <PlusIcon className="w-4 h-4" />
+            Nuovo Cliente
           </button>
         </div>
       </div>
+
+      {showForm && (
+        <div className="card mb-6">
+          <h2 className="text-lg font-semibold mb-4">Nuovo Cliente</h2>
+          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+            <input className="input-field" placeholder="Nome" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} required />
+            <input className="input-field" placeholder="Cognome" value={form.cognome} onChange={e => setForm({...form, cognome: e.target.value})} />
+            <input className="input-field" placeholder="Email" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+            <input className="input-field" placeholder="Telefono" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} />
+            <textarea className="input-field col-span-2" placeholder="Note" value={form.note} onChange={e => setForm({...form, note: e.target.value})} rows={3} />
+            <div className="col-span-2 flex gap-2">
+              <button type="submit" className="btn-primary">Salva</button>
+              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Annulla</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {showImport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-xl">
+            <h2 className="text-lg font-semibold mb-4">Anteprima importazione ({importRows.length} clienti)</h2>
+            <div className="overflow-auto max-h-64 mb-4">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-3 py-2">Nome</th>
+                    <th className="text-left px-3 py-2">Cognome</th>
+                    <th className="text-left px-3 py-2">Email</th>
+                    <th className="text-left px-3 py-2">Telefono</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importPreview.map((r, i) => (
+                    <tr key={i} className="border-t">
+                      <td className="px-3 py-2">{r.nome}</td>
+                      <td className="px-3 py-2">{r.cognome}</td>
+                      <td className="px-3 py-2">{r.email}</td>
+                      <td className="px-3 py-2">{r.telefono}</td>
+                    </tr>
+                  ))}
+                  {importRows.length > 5 && (
+                    <tr><td colSpan={4} className="px-3 py-2 text-gray-400 text-center">... e altri {importRows.length - 5} clienti</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => { setShowImport(false); setImportRows([]); setImportPreview([]) }} className="btn-secondary">Annulla</button>
+              <button onClick={handleImportConfirm} disabled={importing} className="btn-primary">
+                {importing ? 'Importazione...' : `Importa ${importRows.length} clienti`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="relative mb-6">
         <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
@@ -151,7 +214,7 @@ export default function Clienti() {
                     <td className="px-6 py-4 text-gray-500">{c.email}</td>
                     <td className="px-6 py-4 text-gray-500">{c.telefono}</td>
                     <td className="px-6 py-4 text-right">
-                      <button 
+                      <button
                         onClick={(e) => { e.stopPropagation(); navigate(`/clienti/${c.id}`) }}
                         className="btn-secondary py-1 px-3 text-xs flex items-center gap-1 ml-auto"
                       >
@@ -163,59 +226,6 @@ export default function Clienti() {
               )}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">Nuovo Cliente</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <input placeholder="Nome" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} className="input-field" required />
-                <input placeholder="Cognome" value={form.cognome} onChange={e => setForm({...form, cognome: e.target.value})} className="input-field" required />
-              </div>
-              <input placeholder="Email" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="input-field" />
-              <input placeholder="Telefono" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} className="input-field" />
-              <textarea placeholder="Note" value={form.note} onChange={e => setForm({...form, note: e.target.value})} className="input-field" rows={3} />
-              <div className="flex gap-3 justify-end">
-                <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Annulla</button>
-                <button type="submit" className="btn-primary">Salva</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showImport && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-3xl max-h-[80vh] flex flex-col">
-            <h3 className="text-lg font-bold mb-2">Anteprima importazione</h3>
-            <div className="overflow-auto flex-1 border rounded-lg">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 sticky top-0">
-                  <tr>
-                    <th className="text-left px-4 py-2">Nome</th>
-                    <th className="text-left px-4 py-2">Email</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {csvPreview.map((c, i) => (
-                    <tr key={i} className="border-b">
-                      <td className="px-4 py-2">{c.nome} {c.cognome}</td>
-                      <td className="px-4 py-2">{c.email}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex gap-3 justify-end mt-4">
-              <button type="button" onClick={() => setShowImport(false)} className="btn-secondary">Annulla</button>
-              <button type="button" onClick={handleImport} disabled={importing} className="btn-primary">
-                {importing ? 'Importazione...' : `Importa ${csvPreview.length} clienti`}
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
