@@ -10,6 +10,10 @@
   "dependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
+        "@fullcalendar/react": "^6.1.10",
+    "@fullcalendar/daygrid": "^6.1.10",
+    "@fullcalendar/timegrid": "^6.1.10",
+    "@fullcalendar/interaction": "^6.1.10",
     "react-router-dom": "^6.22.0",
     "axios": "^1.6.0",
     "@headlessui/react": "^1.7.18",
