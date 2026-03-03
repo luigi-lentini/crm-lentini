@@ -4,6 +4,7 @@ import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Clienti from './pages/Clienti.jsx'
+import ClienteDettaglio from './pages/ClienteDettaglio.jsx'
 import Attivita from './pages/Attivita.jsx'
 import Trattative from './pages/Trattative.jsx'
 import Profilo from './pages/Profilo.jsx'
@@ -32,6 +33,7 @@ export default function App() {
         }>
           <Route index element={<Dashboard />} />
           <Route path="clienti" element={<Clienti />} />
+                        <Route path="clienti/:id" element={<ClienteDettaglio />} />
           <Route path="attivita" element={<Attivita />} />
           <Route path="trattative" element={<Trattative />} />
           <Route path="profilo" element={<Profilo />} />

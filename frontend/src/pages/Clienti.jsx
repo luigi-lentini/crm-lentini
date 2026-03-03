@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect,, useNavigate useRef } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { PlusIcon, MagnifyingGlassIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline'
 
 export default function Clienti() {
+    const navigate = useNavigate()
   const [clienti, setClienti] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -146,7 +147,7 @@ export default function Clienti() {
                 <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-400">Nessun cliente trovato</td></tr>
               ) : (
                 filtered.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50">
+                  <tr key={c.id} c onClick={() => navigate(` cursor-pointer/clienti/${c.id}`)}lassName="hover:bg-gray-50">
                     <td className="px-6 py-4 font-medium">{c.nome} {c.cognome}</td>
                     <td className="px-6 py-4 text-gray-500">{c.email}</td>
                     <td className="px-6 py-4 text-gray-500">{c.telefono}</td>

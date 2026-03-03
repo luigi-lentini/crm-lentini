@@ -16,6 +16,14 @@ const Appuntamento = sequelize.define('Appuntamento', {
   clienteId: { type: DataTypes.INTEGER },
   clienteNome: { type: DataTypes.STRING },
   note: { type: DataTypes.TEXT },
+  note_salienti: { type: DataTypes.TEXT },
+  si_ripete: { type: DataTypes.STRING, defaultValue: 'No' },
+  tutto_il_giorno: { type: DataTypes.BOOLEAN, defaultValue: false },
+  appuntamento_online: { type: DataTypes.BOOLEAN, defaultValue: false },
+  invia_email: { type: DataTypes.BOOLEAN, defaultValue: false },
+  partecipanti: { type: DataTypes.TEXT, defaultValue: '[]' },
+  indirizzo: { type: DataTypes.STRING },
+  indirizzo_alternativo: { type: DataTypes.STRING },
   priorita: { type: DataTypes.ENUM('bassa', 'media', 'alta'), defaultValue: 'media' },
   userId: { type: DataTypes.INTEGER }
 })
@@ -29,6 +37,14 @@ router.get('/', async (req, res) => {
     const items = await Appuntamento.findAll({ where: { userId: req.user.id }, order: [['dataInizio', 'ASC']] })
     res.json(items)
   } catch { res.status(500).json({ message: 'Errore nel recupero appuntamenti' }) }
+})
+
+router.get('/:id', async (req, res) => {
+  try {
+    const item = await Appuntamento.findOne({ where: { id: req.params.id, userId: req.user.id } })
+    if (!item) return res.status(404).json({ message: 'Non trovato' })
+    res.json(item)
+  } catch { res.status(500).json({ message: 'Errore nel recupero' }) }
 })
 
 router.post('/', async (req, res) => {

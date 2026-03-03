@@ -11,6 +11,11 @@ const Cliente = sequelize.define('Cliente', {
   email: { type: DataTypes.STRING },
   telefono: { type: DataTypes.STRING },
   note: { type: DataTypes.TEXT },
+  indirizzo: { type: DataTypes.STRING },
+  aum: { type: DataTypes.DECIMAL(15,2) },
+  etichette: { type: DataTypes.TEXT, defaultValue: '[]' },
+  ultimo_incontro: { type: DataTypes.DATEONLY },
+  prossimo_incontro: { type: DataTypes.DATEONLY },
   userId: { type: DataTypes.INTEGER }
 })
 
@@ -36,6 +41,17 @@ router.get('/count', authMiddleware, async (req, res) => {
   }
 })
 
+// GET /api/clienti/:id
+router.get('/:id', authMiddleware, async (req, res) => {
+  try {
+    const c = await Cliente.findOne({ where: { id: req.params.id, userId: req.user.id } })
+    if (!c) return res.status(404).json({ message: 'Cliente non trovato' })
+    res.json(c)
+  } catch {
+    res.status(500).json({ message: 'Errore nel caricamento' })
+  }
+})
+
 // POST /api/clienti
 router.post('/', authMiddleware, async (req, res) => {
   try {
@@ -46,7 +62,7 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 })
 
-// POST /api/clienti/import - Import bulk da CSV
+// POST /api/clienti/import
 router.post('/import', authMiddleware, async (req, res) => {
   try {
     const { clienti } = req.body
@@ -61,14 +77,7 @@ router.post('/import', authMiddleware, async (req, res) => {
         continue
       }
       try {
-        await Cliente.create({
-          nome: c.nome || '',
-          cognome: c.cognome || '',
-          email: c.email || '',
-          telefono: c.telefono || '',
-          note: c.note || '',
-          userId: req.user.id
-        })
+        await Cliente.create({ nome: c.nome||'', cognome: c.cognome||'', email: c.email||'', telefono: c.telefono||'', note: c.note||'', userId: req.user.id })
         risultati.importati++
       } catch {
         risultati.saltati++
