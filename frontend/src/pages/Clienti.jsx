@@ -1,8 +1,9 @@
-import { useState, useEffect,, useNavigate useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { PlusIcon, MagnifyingGlassIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline'
 
+import { useNavigate } from 'react-router-dom'
 export default function Clienti() {
     const navigate = useNavigate()
   const [clienti, setClienti] = useState([])
