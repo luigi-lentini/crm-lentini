@@ -34,7 +34,9 @@ export default function Clienti() {
     }
   }
 
-  useEffect(() => { fetchClienti() }, [])
+  useEffect(() => {
+    fetchClienti()
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -44,7 +46,9 @@ export default function Clienti() {
       setShowForm(false)
       setForm({ nome: '', cognome: '', email: '', telefono: '', note: '' })
       fetchClienti()
-    } catch { toast.error('Errore nel salvataggio') }
+    } catch {
+      toast.error('Errore nel salvataggio')
+    }
   }
 
   const handleFileChange = async (e) => {
@@ -63,7 +67,7 @@ export default function Clienti() {
           const workbook = XLSX.read(data, { type: 'array' })
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
           const json = XLSX.utils.sheet_to_json(firstSheet)
-          
+
           const colonneAccettate = {
             nome: ['nome', 'name'],
             cognome: ['cognome', 'surname', 'last name'],
@@ -94,9 +98,9 @@ export default function Clienti() {
           const lines = text.split('
 ').filter(l => l.trim())
           if (lines.length < 2) throw new Error('File CSV non valido')
-          
+
           const separator = lines[0].includes(';') ? ';' : ','
-          const rawHeaders = lines[0].split(separator).map(h => h.trim().toLowerCase().replace(/["" ]/g, ''))
+          const rawHeaders = lines[0].split(separator).map(h => h.trim().toLowerCase().replace(/["\s]/g, ''))
           
           const mappa = {}
           rawHeaders.forEach((h, i) => {
@@ -108,7 +112,7 @@ export default function Clienti() {
           })
 
           rows = lines.slice(1).map(line => {
-            const cols = line.split(separator).map(c => c.trim().replace(/[""]/g, ''))
+            const cols = line.split(separator).map(c => c.trim().replace(/"/g, ''))
             return {
               nome: mappa.nome !== undefined ? cols[mappa.nome] || '' : '',
               cognome: mappa.cognome !== undefined ? cols[mappa.cognome] || '' : '',
@@ -146,7 +150,9 @@ export default function Clienti() {
       try {
         await axios.post(`${API}/api/clienti`, row, { headers })
         ok++
-      } catch { err++ }
+      } catch {
+        err++
+      }
     }
     setImporting(false)
     setShowImport(false)
@@ -162,11 +168,12 @@ export default function Clienti() {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Clienti</h1>
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <label className="btn-secondary flex items-center gap-1 text-sm cursor-pointer">
-            <ArrowUpTrayIcon className="w-4 h-4" /> Importa Excel/CSV
+            <ArrowUpTrayIcon className="w-4 h-4" />
+            Importa Excel/CSV
             <input 
               type="file" 
               accept=".csv, .xlsx, .xls" 
@@ -175,23 +182,52 @@ export default function Clienti() {
             />
           </label>
           <button 
-            onClick={() => setShowForm(!showForm)} 
+            onClick={() => setShowForm(!showForm)}
             className="btn-primary flex items-center gap-1 text-sm"
           >
-            <PlusIcon className="w-4 h-4" /> Nuovo Cliente
+            <PlusIcon className="w-4 h-4" />
+            Nuovo Cliente
           </button>
         </div>
       </div>
 
       {showForm && (
-        <div className="card mb-8 p-6 border-2 border-blue-100 bg-blue-50/30">
-          <h2 className="text-lg font-bold mb-4">Nuovo Cliente</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-            <input className="input-field" placeholder="Nome" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} required />
-            <input className="input-field" placeholder="Cognome" value={form.cognome} onChange={e => setForm({...form, cognome: e.target.value})} />
-            <input className="input-field" placeholder="Email" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
-            <input className="input-field" placeholder="Telefono" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} />
-            <textarea className="input-field col-span-2" placeholder="Note" value={form.note} onChange={e => setForm({...form, note: e.target.value})} rows={3} />
+        <div className="card mb-6 animate-in slide-in-from-top duration-300">
+          <h2 className="text-lg font-semibold mb-4">Nuovo Cliente</h2>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input 
+              className="input-field"
+              placeholder="Nome"
+              value={form.nome}
+              onChange={(e) => setForm({...form, nome: e.target.value})}
+              required
+            />
+            <input 
+              className="input-field"
+              placeholder="Cognome"
+              value={form.cognome}
+              onChange={(e) => setForm({...form, cognome: e.target.value})}
+            />
+            <input 
+              className="input-field"
+              placeholder="Email"
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({...form, email: e.target.value})}
+            />
+            <input 
+              className="input-field"
+              placeholder="Telefono"
+              value={form.telefono}
+              onChange={(e) => setForm({...form, telefono: e.target.value})}
+            />
+            <textarea 
+              className="input-field col-span-2"
+              placeholder="Note"
+              value={form.note}
+              onChange={(e) => setForm({...form, note: e.target.value})}
+              rows={3}
+            />
             <div className="col-span-2 flex gap-2">
               <button type="submit" className="btn-primary">Salva</button>
               <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Annulla</button>
@@ -230,8 +266,17 @@ export default function Clienti() {
               </table>
             </div>
             <div className="flex gap-2 justify-end">
-              <button onClick={() => { setShowImport(false); setImportRows([]); setImportPreview([]) }} className="btn-secondary">Annulla</button>
-              <button onClick={handleImportConfirm} disabled={importing} className="btn-primary">
+              <button 
+                onClick={() => { setShowImport(false); setImportRows([]); setImportPreview([]) }} 
+                className="btn-secondary"
+              >
+                Annulla
+              </button>
+              <button 
+                onClick={handleImportConfirm} 
+                disabled={importing}
+                className="btn-primary"
+              >
                 {importing ? 'Importazione...' : `Importa ${importRows.length} clienti`}
               </button>
             </div>
@@ -241,7 +286,13 @@ export default function Clienti() {
 
       <div className="relative mb-6">
         <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
-        <input type="text" placeholder="Cerca cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="input-field pl-10" />
+        <input 
+          type="text"
+          placeholder="Cerca cliente..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input-field pl-10"
+        />
       </div>
 
       {loading ? (
@@ -262,13 +313,24 @@ export default function Clienti() {
                 <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400">Nessun cliente trovato</td></tr>
               ) : (
                 filtered.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/clienti/${c.id}`)}>
+                  <tr 
+                    key={c.id} 
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => navigate(`/clienti/${c.id}`)}
+                  >
                     <td className="px-6 py-4 font-medium">{c.nome} {c.cognome}</td>
                     <td className="px-6 py-4 text-gray-500">{c.email}</td>
                     <td className="px-6 py-4 text-gray-500">{c.telefono}</td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={(e) => { e.stopPropagation(); navigate(`/clienti/${c.id}`) }} className="btn-secondary py-1 px-3 text-xs flex items-center gap-1 ml-auto">
-                        <EyeIcon className="w-3 h-3" /> Vedi/Modifica
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/clienti/${c.id}`)
+                        }}
+                        className="btn-secondary py-1 px-3 text-xs flex items-center gap-1 ml-auto"
+                      >
+                        <EyeIcon className="w-3 h-3" />
+                        Vedi/Modifica
                       </button>
                     </td>
                   </tr>
