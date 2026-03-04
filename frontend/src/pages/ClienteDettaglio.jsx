@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { ArrowLeftIcon, PencilIcon, TrashIcon, PlusIcon, CalendarIcon, DocumentTextIcon, ClipboardDocumentListIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, PencilIcon, TrashIcon, PlusIcon, CalendarIcon, DocumentTextIcon, ClipboardDocumentListIcon, EnvelopeIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 export default function ClienteDettaglio() {
   const { id } = useParams()
@@ -14,7 +14,9 @@ export default function ClienteDettaglio() {
   const [activeTab, setActiveTab] = useState('panoramica')
   const [showNewNote, setShowNewNote] = useState(false)
   const [nota, setNota] = useState('')
-  
+  const [showAddTag, setShowAddTag] = useState(false)
+  const [nuovaEtichetta, setNuovaEtichetta] = useState('')
+
   const token = localStorage.getItem('token')
   const headers = { Authorization: `Bearer ${token}` }
 
@@ -40,9 +42,7 @@ export default function ClienteDettaglio() {
       toast.success('Cliente aggiornato!')
       setEditing(false)
       loadCliente()
-    } catch {
-      toast.error('Errore nell\'aggiornamento')
-    }
+    } catch { toast.error('Errore nell\'aggiornamento') }
   }
 
   const handleDelete = async () => {
@@ -51,16 +51,26 @@ export default function ClienteDettaglio() {
       await axios.delete(`/api/clienti/${id}`, { headers })
       toast.success('Cliente eliminato')
       navigate('/clienti')
-    } catch {
-      toast.error('Errore nell\'eliminazione')
-    }
+    } catch { toast.error('Errore nell\'eliminazione') }
   }
 
   const addNote = () => {
     if (!nota.trim()) return
-    toast.success('Nota aggiunta (da implementare backend)')
+    toast.success('Nota aggiunta (mock)')
     setNota('')
     setShowNewNote(false)
+  }
+
+  const deleteNote = (noteId) => {
+    if (!confirm('Eliminare questa nota?')) return
+    toast.success('Nota eliminata (mock)')
+  }
+
+  const addEtichetta = () => {
+    if (!nuovaEtichetta.trim()) return
+    toast.success('Etichetta aggiunta (mock)')
+    setNuovaEtichetta('')
+    setShowAddTag(false)
   }
 
   if (loading) return <div className="p-8">Caricamento...</div>
@@ -68,12 +78,12 @@ export default function ClienteDettaglio() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate('/clienti')} className="p-2 hover:bg-gray-100 rounded-lg">
             <ArrowLeftIcon className="w-5 h-5" />
           </button>
-          <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-bold">
+          <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
             {cliente.nome[0]}{cliente.cognome[0]}
           </div>
           <div>
@@ -85,17 +95,27 @@ export default function ClienteDettaglio() {
           <button className="btn-secondary flex items-center gap-2"><EnvelopeIcon className="w-4 h-4" /> Email</button>
           <button className="btn-secondary flex items-center gap-2"><DocumentTextIcon className="w-4 h-4" /> Documento</button>
           {!editing ? (
-            <button onClick={() => setEditing(true)} className="btn-primary flex items-center gap-2"><PencilIcon className="w-4 h-4" /> Modifica</button>
+            <button onClick={() => setEditing(true)} className="btn-primary flex items-center gap-2">
+              <PencilIcon className="w-4 h-4" /> Modifica
+            </button>
           ) : (
             <button onClick={() => setEditing(false)} className="btn-secondary">Annulla</button>
           )}
-          <button onClick={handleDelete} className="btn-secondary text-red-600 hover:bg-red-50 flex items-center gap-2"><TrashIcon className="w-4 h-4" /> Elimina</button>
+          <button onClick={handleDelete} className="btn-danger flex items-center gap-2">
+            <TrashIcon className="w-4 h-4" /> Elimina
+          </button>
         </div>
       </div>
 
-      <div className="flex gap-4 border-b mb-6">
+      <div className="flex gap-6 mb-6 border-b">
         {['panoramica', 'info', 'documenti'].map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 font-medium border-b-2 ${activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}>
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+              activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
             {tab === 'panoramica' ? 'Panoramica' : tab === 'info' ? 'Info' : 'Documenti'}
           </button>
         ))}
@@ -105,26 +125,48 @@ export default function ClienteDettaglio() {
         <div className="grid grid-cols-3 gap-6">
           <div className="col-span-2 space-y-6">
             <div className="card">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold">Ultime interazioni</h3>
-                <button onClick={() => setShowNewNote(!showNewNote)} className="btn-secondary flex items-center gap-2"><PlusIcon className="w-4 h-4" /> Nota</button>
+                <button onClick={() => setShowNewNote(!showNewNote)} className="btn-secondary flex items-center gap-2 text-sm">
+                  <PlusIcon className="w-4 h-4" /> Nota
+                </button>
               </div>
+
               {showNewNote && (
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                  <textarea value={nota} onChange={e => setNota(e.target.value)} placeholder="Scrivi una nota..." className="input-field mb-2" rows={3} />
+                  <textarea
+                    value={nota}
+                    onChange={e => setNota(e.target.value)}
+                    placeholder="Scrivi una nota..."
+                    className="input-field mb-2"
+                    rows={3}
+                  />
                   <div className="flex gap-2">
                     <button onClick={addNote} className="btn-primary">Salva</button>
                     <button onClick={() => setShowNewNote(false)} className="btn-secondary">Annulla</button>
                   </div>
                 </div>
               )}
+
               <div className="space-y-3">
-                <div className="p-3 border-l-4 border-blue-600 bg-blue-50 rounded">
+                <div className="p-3 border-l-4 border-blue-600 bg-blue-50 rounded relative group">
+                  <button 
+                    onClick={() => deleteNote(1)}
+                    className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <XMarkIcon className="w-4 h-4" />
+                  </button>
                   <p className="text-sm text-gray-500">27/02/2024 · 14:30</p>
                   <p className="font-medium">Verifica documenti per carta esclusiva</p>
                   <p className="text-sm text-gray-600">Scadenza documento: 25/03/2024</p>
                 </div>
-                <div className="p-3 border-l-4 border-green-600 bg-green-50 rounded">
+                <div className="p-3 border-l-4 border-green-600 bg-green-50 rounded relative group">
+                  <button 
+                    onClick={() => deleteNote(2)}
+                    className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <XMarkIcon className="w-4 h-4" />
+                  </button>
                   <p className="text-sm text-gray-500">20/02/2024 · 10:15</p>
                   <p className="font-medium">Appunto periodico - Incontro trimestrale</p>
                 </div>
@@ -135,11 +177,34 @@ export default function ClienteDettaglio() {
           <div className="space-y-6">
             <div className="card">
               <h3 className="font-bold mb-3">Etichette</h3>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-4">
                 <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">AUM oltre 600K (obiettivo)</span>
                 <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">Clienti</span>
-                <button className="px-3 py-1 border border-dashed border-gray-300 text-gray-400 rounded-full text-sm">+ Aggiungi</button>
               </div>
+              
+              {showAddTag ? (
+                <div className="space-y-2">
+                  <input 
+                    type="text" 
+                    value={nuovaEtichetta}
+                    onChange={e => setNuovaEtichetta(e.target.value)}
+                    placeholder="Nome etichetta..."
+                    className="input-field text-sm"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={addEtichetta} className="btn-primary text-xs py-1">Aggiungi</button>
+                    <button onClick={() => setShowAddTag(false)} className="btn-secondary text-xs py-1">Annulla</button>
+                  </div>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setShowAddTag(true)}
+                  className="px-3 py-1 border border-dashed border-gray-300 text-gray-400 rounded-full text-sm hover:border-blue-400 hover:text-blue-500 transition-colors"
+                >
+                  + Aggiungi
+                </button>
+              )}
             </div>
 
             <div className="card">
@@ -160,13 +225,9 @@ export default function ClienteDettaglio() {
                   </div>
                 </div>
               </div>
-              <button className="btn-primary w-full mt-3 flex items-center justify-center gap-2"><PlusIcon className="w-4 h-4" /> Pianifica</button>
-            </div>
-
-            <div className="card">
-              <h3 className="font-bold mb-3">Attività da pianificare</h3>
-              <p className="text-sm text-gray-400">Nessuna attività pianificata</p>
-              <button className="btn-secondary w-full mt-3">Crea attività</button>
+              <button className="btn-primary w-full mt-3 flex items-center justify-center gap-2">
+                <PlusIcon className="w-4 h-4" /> Pianifica
+              </button>
             </div>
           </div>
         </div>
