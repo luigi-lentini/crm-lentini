@@ -3,6 +3,7 @@ import axios from 'axios'
 import { toast } from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { MagnifyingGlassIcon, PlusIcon, ArrowUpTrayIcon, EyeIcon } from '@heroicons/react/24/outline'
+import * as XLSX from 'xlsx'
 
 const API = import.meta.env.VITE_API_URL
 
@@ -43,45 +44,99 @@ export default function Clienti() {
       setShowForm(false)
       setForm({ nome: '', cognome: '', email: '', telefono: '', note: '' })
       fetchClienti()
-    } catch {
-      toast.error('Errore nel salvataggio')
-    }
+    } catch { toast.error('Errore nel salvataggio') }
   }
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
+
+    const fileName = file.name.toLowerCase()
+    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls')
+
     const reader = new FileReader()
     reader.onload = (ev) => {
-      const text = ev.target.result
-      const lines = text.split('\n').filter(l => l.trim())
-      if (lines.length < 2) {
-        toast.error('File CSV vuoto o non valido')
-        return
+      try {
+        let rows = []
+        if (isExcel) {
+          const data = new Uint8Array(ev.target.result)
+          const workbook = XLSX.read(data, { type: 'array' })
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+          const json = XLSX.utils.sheet_to_json(firstSheet)
+          
+          const colonneAccettate = {
+            nome: ['nome', 'name'],
+            cognome: ['cognome', 'surname', 'last name'],
+            email: ['email', 'e-mail', 'mail'],
+            telefono: ['telefono', 'tel', 'phone', 'cellulare'],
+            note: ['note', 'notes', 'descrizione']
+          }
+
+          rows = json.map(row => {
+            const normalizedRow = {}
+            Object.keys(row).forEach(key => {
+              const lowerKey = key.toLowerCase().trim()
+              for (const [campo, alias] of Object.entries(colonneAccettate)) {
+                if (alias.includes(lowerKey)) normalizedRow[campo] = row[key]
+              }
+            })
+            return {
+              nome: normalizedRow.nome || '',
+              cognome: normalizedRow.cognome || '',
+              email: normalizedRow.email || '',
+              telefono: normalizedRow.telefono || '',
+              note: normalizedRow.note || ''
+            }
+          }).filter(r => r.nome || r.cognome)
+
+        } else {
+          const text = ev.target.result
+          const lines = text.split('
+').filter(l => l.trim())
+          if (lines.length < 2) throw new Error('File CSV non valido')
+          
+          const separator = lines[0].includes(';') ? ';' : ','
+          const rawHeaders = lines[0].split(separator).map(h => h.trim().toLowerCase().replace(/["" ]/g, ''))
+          
+          const mappa = {}
+          rawHeaders.forEach((h, i) => {
+            if (h.includes('nome')) mappa.nome = i
+            if (h.includes('cognome')) mappa.cognome = i
+            if (h.includes('email')) mappa.email = i
+            if (h.includes('tel') || h.includes('phone')) mappa.telefono = i
+            if (h.includes('note')) mappa.note = i
+          })
+
+          rows = lines.slice(1).map(line => {
+            const cols = line.split(separator).map(c => c.trim().replace(/[""]/g, ''))
+            return {
+              nome: mappa.nome !== undefined ? cols[mappa.nome] || '' : '',
+              cognome: mappa.cognome !== undefined ? cols[mappa.cognome] || '' : '',
+              email: mappa.email !== undefined ? cols[mappa.email] || '' : '',
+              telefono: mappa.telefono !== undefined ? cols[mappa.telefono] || '' : '',
+              note: mappa.note !== undefined ? cols[mappa.note] || '' : ''
+            }
+          }).filter(r => r.nome || r.cognome)
+        }
+
+        if (rows.length === 0) {
+          toast.error('Nessun dato valido trovato nel file')
+          return
+        }
+
+        setImportRows(rows)
+        setImportPreview(rows.slice(0, 5))
+        setShowImport(true)
+      } catch (err) {
+        toast.error('Errore nella lettura del file')
       }
-      const rawHeaders = lines[0].split(';').map(h => h.trim().toLowerCase().replace(/[""]/g, ''))
-      const colonneAccettate = { nome: ['nome'], cognome: ['cognome'], email: ['email'], telefono: ['telefono', 'tel', 'phone'], note: ['note'] }
-      const mappaColonne = {}
-      rawHeaders.forEach((h, i) => {
-        for (const [campo, alias] of Object.entries(colonneAccettate)) {
-          if (alias.includes(h)) mappaColonne[campo] = i
-        }
-      })
-      const rows = lines.slice(1).map(line => {
-        const cols = line.split(';').map(c => c.trim().replace(/[""]/g, ''))
-        return {
-          nome: mappaColonne.nome !== undefined ? cols[mappaColonne.nome] || '' : '',
-          cognome: mappaColonne.cognome !== undefined ? cols[mappaColonne.cognome] || '' : '',
-          email: mappaColonne.email !== undefined ? cols[mappaColonne.email] || '' : '',
-          telefono: mappaColonne.telefono !== undefined ? cols[mappaColonne.telefono] || '' : '',
-          note: mappaColonne.note !== undefined ? cols[mappaColonne.note] || '' : ''
-        }
-      }).filter(r => r.nome || r.cognome)
-      setImportRows(rows)
-      setImportPreview(rows.slice(0, 5))
-      setShowImport(true)
     }
-    reader.readAsText(file)
+
+    if (isExcel) {
+      reader.readAsArrayBuffer(file)
+    } else {
+      reader.readAsText(file)
+    }
   }
 
   const handleImportConfirm = async () => {
@@ -91,9 +146,7 @@ export default function Clienti() {
       try {
         await axios.post(`${API}/api/clienti`, row, { headers })
         ok++
-      } catch {
-        err++
-      }
+      } catch { err++ }
     }
     setImporting(false)
     setShowImport(false)
@@ -103,30 +156,36 @@ export default function Clienti() {
     fetchClienti()
   }
 
-  const filtered = clienti.filter(c =>
+  const filtered = clienti.filter(c => 
     `${c.nome} ${c.cognome} ${c.email}`.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold text-gray-800">Clienti</h1>
-        <div className="flex gap-2">
-          <label className="btn-secondary flex items-center gap-1 cursor-pointer text-sm py-2 px-3">
-            <ArrowUpTrayIcon className="w-4 h-4" />
-            Importa CSV
-            <input type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
+        <div className="flex gap-3">
+          <label className="btn-secondary flex items-center gap-1 text-sm cursor-pointer">
+            <ArrowUpTrayIcon className="w-4 h-4" /> Importa Excel/CSV
+            <input 
+              type="file" 
+              accept=".csv, .xlsx, .xls" 
+              className="hidden" 
+              onChange={handleFileChange} 
+            />
           </label>
-          <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-1 text-sm">
-            <PlusIcon className="w-4 h-4" />
-            Nuovo Cliente
+          <button 
+            onClick={() => setShowForm(!showForm)} 
+            className="btn-primary flex items-center gap-1 text-sm"
+          >
+            <PlusIcon className="w-4 h-4" /> Nuovo Cliente
           </button>
         </div>
       </div>
 
       {showForm && (
-        <div className="card mb-6">
-          <h2 className="text-lg font-semibold mb-4">Nuovo Cliente</h2>
+        <div className="card mb-8 p-6 border-2 border-blue-100 bg-blue-50/30">
+          <h2 className="text-lg font-bold mb-4">Nuovo Cliente</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
             <input className="input-field" placeholder="Nome" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} required />
             <input className="input-field" placeholder="Cognome" value={form.cognome} onChange={e => setForm({...form, cognome: e.target.value})} />
@@ -146,13 +205,13 @@ export default function Clienti() {
           <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-xl">
             <h2 className="text-lg font-semibold mb-4">Anteprima importazione ({importRows.length} clienti)</h2>
             <div className="overflow-auto max-h-64 mb-4">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm text-left">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left px-3 py-2">Nome</th>
-                    <th className="text-left px-3 py-2">Cognome</th>
-                    <th className="text-left px-3 py-2">Email</th>
-                    <th className="text-left px-3 py-2">Telefono</th>
+                    <th className="px-3 py-2">Nome</th>
+                    <th className="px-3 py-2">Cognome</th>
+                    <th className="px-3 py-2">Email</th>
+                    <th className="px-3 py-2">Telefono</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,13 +241,7 @@ export default function Clienti() {
 
       <div className="relative mb-6">
         <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Cerca cliente..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="input-field pl-10"
-        />
+        <input type="text" placeholder="Cerca cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="input-field pl-10" />
       </div>
 
       {loading ? (
@@ -214,10 +267,7 @@ export default function Clienti() {
                     <td className="px-6 py-4 text-gray-500">{c.email}</td>
                     <td className="px-6 py-4 text-gray-500">{c.telefono}</td>
                     <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/clienti/${c.id}`) }}
-                        className="btn-secondary py-1 px-3 text-xs flex items-center gap-1 ml-auto"
-                      >
+                      <button onClick={(e) => { e.stopPropagation(); navigate(`/clienti/${c.id}`) }} className="btn-secondary py-1 px-3 text-xs flex items-center gap-1 ml-auto">
                         <EyeIcon className="w-3 h-3" /> Vedi/Modifica
                       </button>
                     </td>
