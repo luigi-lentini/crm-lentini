@@ -95,8 +95,8 @@ export default function Clienti() {
 
         } else {
           const text = ev.target.result
-          const lines = text.split('
-').filter(l => l.trim())
+          const lines = text.split(/\r?
+/).filter(l => l.trim())
           if (lines.length < 2) throw new Error('File CSV non valido')
 
           const separator = lines[0].includes(';') ? ';' : ','
