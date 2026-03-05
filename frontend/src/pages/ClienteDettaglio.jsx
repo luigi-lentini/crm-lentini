@@ -16,11 +16,13 @@ export default function ClienteDettaglio() {
   const [nota, setNota] = useState('')
   const [showAddTag, setShowAddTag] = useState(false)
   const [nuovaEtichetta, setNuovaEtichetta] = useState('')
+    const [note, setNote] = useState([])
 
   const token = localStorage.getItem('token')
   const headers = { Authorization: `Bearer ${token}` }
 
-  useEffect(() => { loadCliente() }, [id])
+  useEffect(() => { loadCliente()
+                      loadNote()}, [id])
 
   const loadCliente = async () => {
     try {
@@ -32,6 +34,15 @@ export default function ClienteDettaglio() {
       navigate('/clienti')
     } finally {
       setLoading(false)
+    }
+  }
+
+    const loadNote = async () => {
+    try {
+      const { data } = await axios.get(`/api/note/cliente/${id}`, { headers })
+      setNote(data)
+    } catch (err) {
+      console.error('Errore caricamento note', err)
     }
   }
 
@@ -269,4 +280,5 @@ export default function ClienteDettaglio() {
       )}
     </div>
   )
+
 }
