@@ -188,4 +188,15 @@ router.post('/logout', authMiddleware, async (req, res) => {
   }
 })
 
+// GET /api/auth/2fa-status - Verifica se il 2FA è abilitato per l'utente
+router.get('/2fa-status', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findOne({ where: { id: req.user.id } })
+    if (!user) return res.status(404).json({ message: 'Utente non trovato' })
+    res.json({ totpEnabled: user.totpEnabled })
+  } catch {
+    res.status(500).json({ message: 'Errore nel recupero stato 2FA' })
+  }
+})
+
 export default router
