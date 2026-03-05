@@ -18,6 +18,19 @@ export default function Profilo() {
   const token = localStorage.getItem('token')
   const headers = { Authorization: `Bearer ${token}` }
 
+  // Carica lo stato 2FA all'avvio
+  useEffect(() => {
+    const fetch2FAStatus = async () => {
+      try {
+        const { data } = await axios.get(`${API}/api/auth/2fa-status`, { headers })
+        setTotpEnabled(data.totpEnabled)
+      } catch (err) {
+        console.error('Errore nel caricamento stato 2FA', err)
+      }
+    }
+    fetch2FAStatus()
+  }, [])
+
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
   const handleSubmit = async (e) => {
@@ -94,18 +107,20 @@ export default function Profilo() {
   }
 
   return (
-    <div className="p-6 max-w-lg">
-      <div className="flex items-center gap-3 mb-6">
-        <KeyIcon className="w-8 h-8 text-blue-600" />
-        <h1 className="text-2xl font-bold text-gray-800">Profilo & Sicurezza</h1>
-      </div>
+    <div className="p-6 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold text-gray-900 mb-8">Profilo & Sicurezza</h1>
 
       {/* Cambia Password */}
-      <div className="bg-white rounded-xl shadow p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">Cambia Password</h2>
+      <div className="card mb-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <KeyIcon className="w-5 h-5 text-blue-600" />
+          </div>
+          <h2 className="text-lg font-semibold">Cambia Password</h2>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Password Attuale</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password Attuale</label>
             <input
               type="password"
               name="passwordAttuale"
@@ -116,7 +131,7 @@ export default function Profilo() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Nuova Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nuova Password</label>
             <input
               type="password"
               name="nuovaPassword"
@@ -127,7 +142,7 @@ export default function Profilo() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Conferma Nuova Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Conferma Nuova Password</label>
             <input
               type="password"
               name="confermaPassword"
@@ -137,59 +152,65 @@ export default function Profilo() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <button type="submit" disabled={loading} className="btn-primary w-full">
+          <button type="submit" disabled={loading} className="btn-primary">
             {loading ? 'Salvataggio...' : 'Aggiorna Password'}
           </button>
         </form>
       </div>
 
       {/* Sezione 2FA */}
-      <div className="bg-white rounded-xl shadow p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <ShieldCheckIcon className="w-6 h-6 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-700">Autenticazione a Due Fattori (2FA)</h2>
+      <div className="card">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-green-100 rounded-lg">
+            <ShieldCheckIcon className="w-5 h-5 text-green-600" />
+          </div>
+          <h2 className="text-lg font-semibold">Autenticazione a Due Fattori (2FA)</h2>
         </div>
 
         {totpEnabled ? (
           <div>
-            <div className="flex items-center gap-2 mb-4 text-green-600">
-              <span className="text-2xl">✅</span>
-              <span className="font-semibold">2FA attivo - Il tuo account è protetto</span>
+            <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-4">
+              <span className="text-lg">✅</span>
+              <span className="font-medium"> 2FA attivo - Il tuo account è protetto </span>
             </div>
-            <p className="text-sm text-gray-500 mb-4">
-              Stai usando Google Authenticator per proteggere il tuo accesso.
-            </p>
-            <button onClick={handleDisable2FA} disabled={loadingTotp} className="btn-secondary text-red-600 border-red-300 hover:bg-red-50">
+            <p className="text-sm text-gray-500 mb-4">Stai usando Google Authenticator per proteggere il tuo accesso.</p>
+            <button
+              onClick={handleDisable2FA}
+              disabled={loadingTotp}
+              className="btn-secondary text-red-600 border-red-300 hover:bg-red-50"
+            >
               {loadingTotp ? 'Disabilitazione...' : 'Disabilita 2FA'}
             </button>
           </div>
         ) : !totpSetupData ? (
           <div>
             <p className="text-sm text-gray-500 mb-4">
-              Aggiungi un livello extra di sicurezza al tuo account. Con il 2FA attivo,
-              oltre alla password dovrai inserire un codice dall'app <strong>Google Authenticator</strong>.
+              Aggiungi un livello extra di sicurezza al tuo account. Con il 2FA attivo, oltre alla password
+              dovrai inserire un codice dall'app <strong>Google Authenticator</strong>.
             </p>
-            <button onClick={handleSetup2FA} disabled={loadingTotp} className="btn-primary">
+            <button
+              onClick={handleSetup2FA}
+              disabled={loadingTotp}
+              className="btn-primary"
+            >
               {loadingTotp ? 'Generazione QR...' : 'Attiva 2FA con Authenticator'}
             </button>
           </div>
         ) : (
           <div>
-            <p className="text-sm text-gray-600 mb-3 font-medium">
-              1. Apri <strong>Google Authenticator</strong> sul tuo telefono
-            </p>
-            <p className="text-sm text-gray-600 mb-3">
-              2. Scansiona il QR code qui sotto con l'app
-            </p>
+            <ol className="list-decimal list-inside space-y-3 text-sm text-gray-700 mb-6">
+              <li>Apri <strong>Google Authenticator</strong> sul tuo telefono</li>
+              <li>Scansiona il QR code qui sotto con l'app</li>
+            </ol>
             <div className="flex justify-center mb-4">
-              <img src={totpSetupData.qrCode} alt="QR Code 2FA" className="w-48 h-48 border rounded-lg" />
+              <img src={totpSetupData.qrCode} alt="QR Code 2FA" className="border rounded-lg p-2" />
             </div>
-            <p className="text-xs text-gray-400 text-center mb-4">
-              Oppure inserisci manualmente il codice: <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">{totpSetupData.secret}</code>
+            <p className="text-xs text-gray-500 text-center mb-4">
+              Oppure inserisci manualmente il codice: <code className="bg-gray-100 px-2 py-0.5 rounded font-mono">{totpSetupData.secret}</code>
             </p>
-            <p className="text-sm text-gray-600 mb-2">
-              3. Inserisci il codice a 6 cifre generato dall'app per confermare:
-            </p>
+            <ol className="list-decimal list-inside text-sm text-gray-700 mb-4" start={3}>
+              <li>Inserisci il codice a 6 cifre generato dall'app per confermare:</li>
+            </ol>
             <input
               type="text"
               value={totpCode}
@@ -199,7 +220,7 @@ export default function Profilo() {
               maxLength={6}
             />
             <div className="flex gap-2">
-              <button onClick={handleVerify2FA} disabled={loadingTotp} className="btn-primary flex-1">
+              <button onClick={handleVerify2FA} disabled={loadingTotp} className="btn-primary">
                 {loadingTotp ? 'Verifica...' : 'Conferma e Attiva 2FA'}
               </button>
               <button onClick={() => { setTotpSetupData(null); setTotpCode('') }} className="btn-secondary">
