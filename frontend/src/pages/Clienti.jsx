@@ -57,31 +57,39 @@ export default function Clienti() {
 
     const fileName = file.name.toLowerCase()
     const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls')
-
     const reader = new FileReader()
+
     reader.onload = (ev) => {
       try {
         let rows = []
         if (isExcel) {
           const data = new Uint8Array(ev.target.result)
           const workbook = XLSX.read(data, { type: 'array' })
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+          const firstSheetName = workbook.SheetNames[0]
+          const firstSheet = workbook.Sheets[firstSheetName]
           const json = XLSX.utils.sheet_to_json(firstSheet)
 
-          const colonneAccettate = {
-            nome: ['nome', 'name'],
-            cognome: ['cognome', 'surname', 'last name'],
-            email: ['email', 'e-mail', 'mail'],
-            telefono: ['telefono', 'tel', 'phone', 'cellulare'],
-            note: ['note', 'notes', 'descrizione']
+          if (json.length === 0) {
+            toast.error('Il file Excel sembra vuoto')
+            return
+          }
+
+          const mapping = {
+            nome: ['nome', 'name', 'first', 'cliente'],
+            cognome: ['cognome', 'surname', 'last', 'cogn'],
+            email: ['email', 'e-mail', 'mail', 'posta'],
+            telefono: ['telefono', 'tel', 'phone', 'cell', 'mobile'],
+            note: ['note', 'notes', 'desc', 'info', 'osservazioni']
           }
 
           rows = json.map(row => {
             const normalizedRow = {}
             Object.keys(row).forEach(key => {
               const lowerKey = key.toLowerCase().trim()
-              for (const [campo, alias] of Object.entries(colonneAccettate)) {
-                if (alias.includes(lowerKey)) normalizedRow[campo] = row[key]
+              for (const [campo, aliases] of Object.entries(mapping)) {
+                if (aliases.some(a => lowerKey.includes(a))) {
+                  normalizedRow[campo] = row[key]
+                }
               }
             })
             return {
@@ -91,23 +99,28 @@ export default function Clienti() {
               telefono: normalizedRow.telefono || '',
               note: normalizedRow.note || ''
             }
-          }).filter(r => r.nome || r.cognome)
-
+          }).filter(r => r.nome || r.cognome || r.email)
         } else {
           const text = ev.target.result
-                  const lines = text.split(/\r?\n/).filter(l => l.trim())
-          if (lines.length < 2) throw new Error('File CSV non valido')
+          const lines = text.split(/\r?\n/).filter(l => l.trim())
+          if (lines.length < 2) throw new Error('File CSV non valido o vuoto')
 
           const separator = lines[0].includes(';') ? ';' : ','
-          const rawHeaders = lines[0].split(separator).map(h => h.trim().toLowerCase().replace(/["\s]/g, ''))
-          
+          const rawHeaders = lines[0].split(separator).map(h => h.trim().toLowerCase())
+
+          const mapping = {
+            nome: ['nome', 'name', 'first'],
+            cognome: ['cognome', 'surname', 'last'],
+            email: ['email', 'e-mail', 'mail'],
+            telefono: ['telefono', 'tel', 'phone', 'cell'],
+            note: ['note', 'notes', 'desc']
+          }
+
           const mappa = {}
           rawHeaders.forEach((h, i) => {
-            if (h.includes('nome')) mappa.nome = i
-            if (h.includes('cognome')) mappa.cognome = i
-            if (h.includes('email')) mappa.email = i
-            if (h.includes('tel') || h.includes('phone')) mappa.telefono = i
-            if (h.includes('note')) mappa.note = i
+            for (const [campo, aliases] of Object.entries(mapping)) {
+              if (aliases.some(a => h.includes(a))) mappa[campo] = i
+            }
           })
 
           rows = lines.slice(1).map(line => {
@@ -119,11 +132,11 @@ export default function Clienti() {
               telefono: mappa.telefono !== undefined ? cols[mappa.telefono] || '' : '',
               note: mappa.note !== undefined ? cols[mappa.note] || '' : ''
             }
-          }).filter(r => r.nome || r.cognome)
+          }).filter(r => r.nome || r.cognome || r.email)
         }
 
         if (rows.length === 0) {
-          toast.error('Nessun dato valido trovato nel file')
+          toast.error('Nessun dato valido trovato nel file (controlla le intestazioni)')
           return
         }
 
@@ -131,6 +144,7 @@ export default function Clienti() {
         setImportPreview(rows.slice(0, 5))
         setShowImport(true)
       } catch (err) {
+        console.error(err)
         toast.error('Errore nella lettura del file')
       }
     }
@@ -140,6 +154,8 @@ export default function Clienti() {
     } else {
       reader.readAsText(file)
     }
+    // Reset file input
+    e.target.value = ''
   }
 
   const handleImportConfirm = async () => {
@@ -161,26 +177,29 @@ export default function Clienti() {
     fetchClienti()
   }
 
-  const filtered = clienti.filter(c => 
+  const filtered = clienti.filter(c =>
     `${c.nome} ${c.cognome} ${c.email}`.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Clienti</h1>
-        <div className="flex gap-2">
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Clienti</h1>
+          <p className="text-gray-500 text-sm">Gestisci l'anagrafica dei tuoi clienti</p>
+        </div>
+        <div className="flex gap-3">
           <label className="btn-secondary flex items-center gap-1 text-sm cursor-pointer">
             <ArrowUpTrayIcon className="w-4 h-4" />
             Importa Excel/CSV
-            <input 
-              type="file" 
-              accept=".csv, .xlsx, .xls" 
-              className="hidden" 
-              onChange={handleFileChange} 
+            <input
+              type="file"
+              accept=".csv, .xlsx, .xls"
+              className="hidden"
+              onChange={handleFileChange}
             />
           </label>
-          <button 
+          <button
             onClick={() => setShowForm(!showForm)}
             className="btn-primary flex items-center gap-1 text-sm"
           >
@@ -191,88 +210,100 @@ export default function Clienti() {
       </div>
 
       {showForm && (
-        <div className="card mb-6 animate-in slide-in-from-top duration-300">
+        <div className="card mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
           <h2 className="text-lg font-semibold mb-4">Nuovo Cliente</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input 
+            <input
               className="input-field"
               placeholder="Nome"
               value={form.nome}
-              onChange={(e) => setForm({...form, nome: e.target.value})}
+              onChange={(e) => setForm({ ...form, nome: e.target.value })}
               required
             />
-            <input 
+            <input
               className="input-field"
               placeholder="Cognome"
               value={form.cognome}
-              onChange={(e) => setForm({...form, cognome: e.target.value})}
+              onChange={(e) => setForm({ ...form, cognome: e.target.value })}
             />
-            <input 
+            <input
               className="input-field"
               placeholder="Email"
               type="email"
               value={form.email}
-              onChange={(e) => setForm({...form, email: e.target.value})}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
-            <input 
+            <input
               className="input-field"
               placeholder="Telefono"
               value={form.telefono}
-              onChange={(e) => setForm({...form, telefono: e.target.value})}
+              onChange={(e) => setForm({ ...form, telefono: e.target.value })}
             />
-            <textarea 
+            <textarea
               className="input-field col-span-2"
               placeholder="Note"
               value={form.note}
-              onChange={(e) => setForm({...form, note: e.target.value})}
+              onChange={(e) => setForm({ ...form, note: e.target.value })}
               rows={3}
             />
             <div className="col-span-2 flex gap-2">
               <button type="submit" className="btn-primary">Salva</button>
-              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Annulla</button>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="btn-secondary"
+              >
+                Annulla
+              </button>
             </div>
           </form>
         </div>
       )}
 
       {showImport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-xl">
-            <h2 className="text-lg font-semibold mb-4">Anteprima importazione ({importRows.length} clienti)</h2>
-            <div className="overflow-auto max-h-64 mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-xl animate-in zoom-in duration-200">
+            <h2 className="text-lg font-semibold mb-2">Anteprima importazione</h2>
+            <p className="text-sm text-gray-500 mb-4">Abbiamo trovato {importRows.length} clienti nel file. Ecco i primi 5:</p>
+            <div className="overflow-auto max-h-64 mb-6 border rounded-lg">
               <table className="w-full text-sm text-left">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0">
                   <tr>
-                    <th className="px-3 py-2">Nome</th>
-                    <th className="px-3 py-2">Cognome</th>
-                    <th className="px-3 py-2">Email</th>
-                    <th className="px-3 py-2">Telefono</th>
+                    <th className="px-3 py-2 font-semibold">Nome</th>
+                    <th className="px-3 py-2 font-semibold">Cognome</th>
+                    <th className="px-3 py-2 font-semibold">Email</th>
+                    <th className="px-3 py-2 font-semibold">Telefono</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y">
                   {importPreview.map((r, i) => (
-                    <tr key={i} className="border-t">
+                    <tr key={i}>
                       <td className="px-3 py-2">{r.nome}</td>
                       <td className="px-3 py-2">{r.cognome}</td>
-                      <td className="px-3 py-2">{r.email}</td>
-                      <td className="px-3 py-2">{r.telefono}</td>
+                      <td className="px-3 py-2 text-gray-500">{r.email}</td>
+                      <td className="px-3 py-2 text-gray-500">{r.telefono}</td>
                     </tr>
                   ))}
                   {importRows.length > 5 && (
-                    <tr><td colSpan={4} className="px-3 py-2 text-gray-400 text-center">... e altri {importRows.length - 5} clienti</td></tr>
+                    <tr>
+                      <td colSpan={4} className="px-3 py-4 text-gray-400 text-center bg-gray-50/50">
+                        ... e altri {importRows.length - 5} clienti
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
             </div>
             <div className="flex gap-2 justify-end">
-              <button 
-                onClick={() => { setShowImport(false); setImportRows([]); setImportPreview([]) }} 
+              <button
+                onClick={() => { setShowImport(false); setImportRows([]); setImportPreview([]) }}
                 className="btn-secondary"
+                disabled={importing}
               >
                 Annulla
               </button>
-              <button 
-                onClick={handleImportConfirm} 
+              <button
+                onClick={handleImportConfirm}
                 disabled={importing}
                 className="btn-primary"
               >
@@ -285,9 +316,9 @@ export default function Clienti() {
 
       <div className="relative mb-6">
         <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
-        <input 
+        <input
           type="text"
-          placeholder="Cerca cliente..."
+          placeholder="Cerca cliente per nome, cognome o email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="input-field pl-10"
@@ -295,41 +326,54 @@ export default function Clienti() {
       </div>
 
       {loading ? (
-        <p className="text-gray-400">Caricamento...</p>
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
       ) : (
         <div className="card overflow-hidden p-0">
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Nome</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Email</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Telefono</th>
-                <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase">Azioni</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Telefono</th>
+                <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400">Nessun cliente trovato</td></tr>
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-gray-400">
+                    Nessun cliente trovato
+                  </td>
+                </tr>
               ) : (
                 filtered.map((c) => (
-                  <tr 
-                    key={c.id} 
-                    className="hover:bg-gray-50 cursor-pointer"
+                  <tr
+                    key={c.id}
+                    className="hover:bg-blue-50/40 transition-colors group cursor-pointer"
                     onClick={() => navigate(`/clienti/${c.id}`)}
                   >
-                    <td className="px-6 py-4 font-medium">{c.nome} {c.cognome}</td>
-                    <td className="px-6 py-4 text-gray-500">{c.email}</td>
-                    <td className="px-6 py-4 text-gray-500">{c.telefono}</td>
+                    <td className="px-6 py-4">
+                      <div className="font-semibold text-gray-900">{c.nome} {c.cognome}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">ID: {c.id}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-600">{c.email}</div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {c.telefono}
+                    </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
+                      <button
                         onClick={(e) => {
                           e.stopPropagation()
                           navigate(`/clienti/${c.id}`)
                         }}
-                        className="btn-secondary py-1 px-3 text-xs flex items-center gap-1 ml-auto"
+                        className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 font-medium text-sm bg-blue-50 group-hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
                       >
-                        <EyeIcon className="w-3 h-3" />
-                        Vedi/Modifica
+                        <EyeIcon className="w-4 h-4" />
+                        Dettagli
                       </button>
                     </td>
                   </tr>
