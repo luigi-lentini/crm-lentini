@@ -143,6 +143,7 @@ export default function Clienti() {
         setImportRows(rows)
         setImportPreview(rows.slice(0, 5))
         setShowImport(true)
+              e.target.value = ''
       } catch (err) {
         console.error(err)
         toast.error('Errore nella lettura del file')
@@ -154,8 +155,6 @@ export default function Clienti() {
     } else {
       reader.readAsText(file)
     }
-    // Reset file input
-    e.target.value = ''
   }
 
   const handleImportConfirm = async () => {
