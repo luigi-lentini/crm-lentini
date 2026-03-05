@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken'
 import rateLimit from 'express-rate-limit'
 import { DataTypes } from 'sequelize'
 import { sequelize } from '../db.js'
+import speakeasy from 'speakeasy'
+import qrcode from 'qrcode'
 
 const router = express.Router()
 
@@ -22,7 +24,9 @@ const User = sequelize.define('User', {
   email: { type: DataTypes.STRING, allowNull: false, unique: true },
   password: { type: DataTypes.STRING, allowNull: false },
   ruolo: { type: DataTypes.STRING, defaultValue: 'consulente' },
-  refreshToken: { type: DataTypes.TEXT, defaultValue: null }
+  refreshToken: { type: DataTypes.TEXT, defaultValue: null },
+  totpSecret: { type: DataTypes.STRING, defaultValue: null },
+  totpEnabled: { type: DataTypes.BOOLEAN, defaultValue: false }
 })
 
 User.sync({ force: false })
@@ -71,11 +75,26 @@ router.post('/register', async (req, res) => {
 // POST /api/auth/login
 router.post('/login', loginLimiter, async (req, res) => {
   try {
-    const { email, password } = req.body
+    const { email, password, totpToken } = req.body
     const user = await User.findOne({ where: { email } })
     if (!user) return res.status(401).json({ message: 'Credenziali non valide' })
     const valid = await bcrypt.compare(password, user.password)
     if (!valid) return res.status(401).json({ message: 'Credenziali non valide' })
+
+    // Verifica 2FA se abilitato
+    if (user.totpEnabled) {
+      if (!totpToken) {
+        return res.status(200).json({ requires2FA: true, message: 'Inserisci il codice Authenticator' })
+      }
+      const verified = speakeasy.totp.verify({
+        secret: user.totpSecret,
+        encoding: 'base32',
+        token: totpToken,
+        window: 1
+      })
+      if (!verified) return res.status(401).json({ message: 'Codice Authenticator non valido' })
+    }
+
     const payload = { id: user.id, email: user.email, ruolo: user.ruolo }
     const token = generateAccessToken(payload)
     const refreshToken = generateRefreshToken(payload)
@@ -83,6 +102,61 @@ router.post('/login', loginLimiter, async (req, res) => {
     res.json({ token, refreshToken, user: { id: user.id, nome: user.nome, email: user.email } })
   } catch {
     res.status(500).json({ message: 'Errore nel login' })
+  }
+})
+
+// POST /api/auth/setup-2fa - Genera secret e QR code
+router.post('/setup-2fa', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id)
+    if (!user) return res.status(404).json({ message: 'Utente non trovato' })
+
+    const secret = speakeasy.generateSecret({
+      name: `CRM Lentini (${user.email})`,
+      length: 20
+    })
+
+    await user.update({ totpSecret: secret.base32 })
+
+    const qrUrl = await qrcode.toDataURL(secret.otpauth_url)
+    res.json({ qrCode: qrUrl, secret: secret.base32 })
+  } catch (err) {
+    res.status(500).json({ message: 'Errore nella configurazione 2FA' })
+  }
+})
+
+// POST /api/auth/verify-2fa - Verifica il codice e abilita 2FA
+router.post('/verify-2fa', authMiddleware, async (req, res) => {
+  try {
+    const { token } = req.body
+    const user = await User.findByPk(req.user.id)
+    if (!user || !user.totpSecret) return res.status(400).json({ message: 'Prima avvia il setup 2FA' })
+
+    const verified = speakeasy.totp.verify({
+      secret: user.totpSecret,
+      encoding: 'base32',
+      token,
+      window: 1
+    })
+
+    if (!verified) return res.status(400).json({ message: 'Codice non valido. Riprova.' })
+
+    await user.update({ totpEnabled: true })
+    res.json({ message: '2FA attivato con successo!' })
+  } catch {
+    res.status(500).json({ message: 'Errore nella verifica 2FA' })
+  }
+})
+
+// POST /api/auth/disable-2fa - Disabilita 2FA
+router.post('/disable-2fa', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id)
+    if (!user) return res.status(404).json({ message: 'Utente non trovato' })
+    await user.update({ totpEnabled: false, totpSecret: null })
+    res.json({ message: '2FA disabilitato' })
+  } catch {
+    res.status(500).json({ message: 'Errore nella disabilitazione 2FA' })
   }
 })
 
