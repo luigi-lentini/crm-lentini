@@ -13,6 +13,7 @@ import appuntamentiRoutes from './routes/appuntamenti.js'
 import todoRoutes from './routes/todo.js'
 import progettiRoutes from './routes/progetti.js'
 import verificheRoutes from './routes/verifiche.js'
+import noteRoutes from './routes/note.js'
 
 dotenv.config()
 
@@ -37,6 +38,7 @@ app.use('/api/appuntamenti', appuntamentiRoutes)
 app.use('/api/todo', todoRoutes)
 app.use('/api/progetti', progettiRoutes)
 app.use('/api/verifiche', verificheRoutes)
+app.use('/api/note', noteRoutes)
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
