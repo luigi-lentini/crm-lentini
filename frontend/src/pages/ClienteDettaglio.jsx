@@ -65,18 +65,24 @@ export default function ClienteDettaglio() {
     } catch { toast.error('Errore nell\'eliminazione') }
   }
 
-  const addNote = () => {
+  const addNote = async () => {
     if (!nota.trim()) return
-    toast.success('Nota aggiunta (mock)')
-    setNota('')
-    setShowNewNote(false)
+    try {
+      await axios.post('/api/note', { cliente_id: id, testo: nota, tipo: 'generale' }, { headers })
+      toast.success('Nota aggiunta!')
+      setNota('')
+      setShowNewNote(false)
+      loadNote()
+    } catch { toast.error('Errore aggiunta nota') }
   }
-
-  const deleteNote = (noteId) => {
+  const deleteNote = async (noteId) => {
     if (!confirm('Eliminare questa nota?')) return
-    toast.success('Nota eliminata (mock)')
+    try {
+      await axios.delete(`/api/note/${noteId}`, { headers })
+      toast.success('Nota eliminata!')
+      loadNote()
+    } catch { toast.error('Errore eliminazione') }
   }
-
   const addEtichetta = () => {
     if (!nuovaEtichetta.trim()) return
     toast.success('Etichetta aggiunta (mock)')
@@ -282,3 +288,4 @@ export default function ClienteDettaglio() {
   )
 
 }
+
