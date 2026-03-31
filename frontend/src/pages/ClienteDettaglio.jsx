@@ -1,46 +1,26 @@
-import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { 
-  ArrowLeftIcon, 
-  PencilIcon, 
-  TrashIcon, 
-  PlusIcon, 
-  CalendarIcon, 
-  DocumentTextIcon, 
-  ClipboardDocumentListIcon, 
-  EnvelopeIcon, 
-  XMarkIcon 
-} from '@heroicons/react/24/outline'
+import { ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { useState, useEffect } from 'react'
 
 export default function ClienteDettaglio() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [cliente, setCliente] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState({})
-  const [activeTab, setActiveTab] = useState('panoramica')
-  const [showNewNote, setShowNewNote] = useState(false)
-  const [nota, setNota] = useState('')
-  const [showAddTag, setShowAddTag] = useState(false)
-  const [nuovaEtichetta, setNuovaEtichetta] = useState('')
-  const [note, setNote] = useState([])
 
   const token = localStorage.getItem('token')
   const headers = { Authorization: `Bearer ${token}` }
 
   useEffect(() => {
     loadCliente()
-    loadNote()
   }, [id])
 
   const loadCliente = async () => {
     try {
       const { data } = await axios.get(`/api/clienti/${id}`, { headers })
       setCliente(data)
-      setForm(data)
     } catch {
       toast.error('Errore nel caricamento')
       navigate('/clienti')
@@ -49,268 +29,16 @@ export default function ClienteDettaglio() {
     }
   }
 
-  const loadNote = async () => {
-    try {
-      const { data } = await axios.get(`/api/note/cliente/${id}`, { headers })
-      setNote(data)
-    } catch (err) {
-      console.error('Errore caricamento note', err)
-    }
-  }
-
-  const handleUpdate = async (e) => {
-    e.preventDefault()
-    try {
-      await axios.put(`/api/clienti/${id}`, form, { headers })
-      toast.success('Cliente aggiornato!')
-      setEditing(false)
-      loadCliente()
-    } catch {
-      toast.error('Errore nell\'aggiornamento')
-    }
-  }
-
-  const handleDelete = async () => {
-    if (!confirm('Eliminare questo cliente?')) return
-    try {
-      await axios.delete(`/api/clienti/${id}`, { headers })
-      toast.success('Cliente eliminato')
-      navigate('/clienti')
-    } catch {
-      toast.error('Errore nell\'eliminazione')
-    }
-  }
-
-  const addNote = async () => {
-    if (!nota.trim()) return
-    try {
-      await axios.post('/api/note', {
-        cliente_id: id,
-        testo: nota,
-        tipo: 'generale'
-      }, { headers })
-      toast.success('Nota aggiunta!')
-      setNota('')
-      setShowNewNote(false)
-      loadNote()
-    } catch {
-      toast.error('Errore aggiunta nota')
-    }
-  }
-
-  const deleteNote = async (noteId) => {
-    if (!confirm('Eliminare questa nota?')) return
-    try {
-      await axios.delete(`/api/note/${noteId}`, { headers })
-      toast.success('Nota eliminata!')
-      loadNote()
-    } catch {
-      toast.error('Errore eliminazione')
-    }
-  }
-
-  const addEtichetta = () => {
-    if (!nuovaEtichetta.trim()) return
-    toast.success('Etichetta aggiunta (mock)')
-    setNuovaEtichetta('')
-    setShowAddTag(false)
-  }
-
-  if (loading) return <div className=\"p-8\">Caricamento...</div>
+  if (loading) return <div className="p-8">Caricamento...</div>
   if (!cliente) return null
 
   return (
-    <div className=\"p-8\">
-      <div className=\"flex items-center justify-between mb-8\">
-        <div className=\"flex items-center gap-4\">
-          <button onClick={() => navigate('/clienti')} className=\"p-2 hover:bg-gray-100 rounded-lg\">
-            <ArrowLeftIcon className=\"w-5 h-5\" />
-          </button>
-          <div className=\"w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl\">
-            {cliente.nome[0]}{cliente.cognome[0]}
-          </div>
-          <div>
-            <h1 className=\"text-2xl font-bold\">{cliente.nome} {cliente.cognome}</h1>
-            <p className=\"text-gray-500\">{cliente.email}</p>
-          </div>
-        </div>
-        <div className=\"flex gap-3\">
-          <button className=\"btn-secondary flex items-center gap-2\"><EnvelopeIcon className=\"w-4 h-4\" /> Email</button>
-          <button className=\"btn-secondary flex items-center gap-2\"><DocumentTextIcon className=\"w-4 h-4\" /> Documento</button>
-          {!editing ? (
-            <button onClick={() => setEditing(true)} className=\"btn-primary flex items-center gap-2\">
-              <PencilIcon className=\"w-4 h-4\" /> Modifica
-            </button>
-          ) : (
-            <button onClick={() => setEditing(false)} className=\"btn-secondary\">Annulla</button>
-          )}
-          <button onClick={handleDelete} className=\"btn-danger flex items-center gap-2\">
-            <TrashIcon className=\"w-4 h-4\" /> Elimina
-          </button>
-        </div>
-      </div>
-
-      <div className=\"flex gap-6 mb-6 border-b\">
-        {['panoramica', 'info', 'documenti'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === tab 
-                ? 'border-blue-600 text-blue-600' 
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {tab === 'panoramica' ? 'Panoramica' : tab === 'info' ? 'Info' : 'Documenti'}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'panoramica' && (
-        <div className=\"grid grid-cols-3 gap-6\">
-          <div className=\"col-span-2 space-y-6\">
-            <div className=\"card\">
-              <div className=\"flex items-center justify-between mb-4\">
-                <h3 className=\"font-bold\">Ultime interazioni</h3>
-                <button onClick={() => setShowNewNote(!showNewNote)} className=\"btn-secondary flex items-center gap-2 text-sm\">
-                  <PlusIcon className=\"w-4 h-4\" /> Nota
-                </button>
-              </div>
-
-              {showNewNote && (
-                <div className=\"mb-4 p-3 bg-gray-50 rounded-lg border\">
-                  <textarea 
-                    value={nota}
-                    onChange={e => setNota(e.target.value)}
-                    placeholder=\"Scrivi una nota...\"
-                    className=\"input-field mb-2\"
-                    rows={3}
-                  />
-                  <div className=\"flex gap-2\">
-                    <button onClick={addNote} className=\"btn-primary\">Salva</button>
-                    <button onClick={() => setShowNewNote(false)} className=\"btn-secondary\">Annulla</button>
-                  </div>
-                </div>
-              )}
-
-              <div className=\"space-y-3\">
-                {note.length === 0 ? (
-                  <p className=\"text-gray-400 text-center py-4\">Nessuna nota presente</p>
-                ) : (
-                  note.map(n => (
-                    <div key={n.id} className=\"p-3 border-l-4 border-blue-600 bg-blue-50 rounded relative group\">
-                      <button 
-                        onClick={() => deleteNote(n.id)}
-                        className=\"absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity\"
-                      >
-                        <XMarkIcon className=\"w-4 h-4\" />
-                      </button>
-                      <p className=\"text-sm text-gray-500\">
-                        {new Date(n.createdAt).toLocaleString('it-IT')}
-                      </p>
-                      <p className=\"text-sm text-gray-700 mt-1 whitespace-pre-wrap\">{n.testo}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className=\"space-y-6\">
-            <div className=\"card\">
-              <h3 className=\"font-bold mb-3\">Etichette</h3>
-              <div className=\"flex flex-wrap gap-2 mb-4\">
-                <span className=\"px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm\">AUM oltre 600K (obiettivo)</span>
-                <span className=\"px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm\">Clienti</span>
-              </div>
-              {showAddTag ? (
-                <div className=\"space-y-2\">
-                  <input 
-                    type=\"text\" 
-                    value={nuovaEtichetta} 
-                    onChange={e => setNuovaEtichetta(e.target.value)}
-                    placeholder=\"Nome etichetta...\"
-                    className=\"input-field text-sm\"
-                    autoFocus
-                  />
-                  <div className=\"flex gap-2\">
-                    <button onClick={addEtichetta} className=\"btn-primary text-xs py-1\">Aggiungi</button>
-                    <button onClick={() => setShowAddTag(false)} className=\"btn-secondary text-xs py-1\">Annulla</button>
-                  </div>
-                </div>
-              ) : (
-                <button 
-                  onClick={() => setShowAddTag(true)}
-                  className=\"px-3 py-1 border border-dashed border-gray-300 text-gray-400 rounded-full text-sm hover:border-blue-400 hover:text-blue-500 transition-colors\"
-                >
-                  + Aggiungi
-                </button>
-              )}
-            </div>
-
-            <div className=\"card\">
-              <h3 className=\"font-bold mb-3\">Pianificazione incontri</h3>
-              <div className=\"space-y-2\">
-                <div className=\"flex items-start gap-2\">
-                  <CalendarIcon className=\"w-5 h-5 text-blue-600 mt-0.5\" />
-                  <div>
-                    <p className=\"text-sm font-medium\">Ultimo incontro</p>
-                    <p className=\"text-xs text-gray-500\">{cliente.ultimo_incontro || 'N/A'}</p>
-                  </div>
-                </div>
-                <div className=\"flex items-start gap-2\">
-                  <CalendarIcon className=\"w-5 h-5 text-green-600 mt-0.5\" />
-                  <div>
-                    <p className=\"text-sm font-medium\">Prossimo incontro</p>
-                    <p className=\"text-xs text-gray-500\">{cliente.prossimo_incontro || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-              <button 
-                onClick={() => navigate('/agenda')}
-                className=\"btn-primary w-full mt-3 flex items-center justify-center gap-2\"
-              >
-                <PlusIcon className=\"w-4 h-4\" /> Pianifica
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'info' && (
-        <div className=\"card max-w-2xl\">
-          {editing ? (
-            <form onSubmit={handleUpdate} className=\"space-y-4\">
-              <div className=\"grid grid-cols-2 gap-4\">
-                <input placeholder=\"Nome\" value={form.nome||''} onChange={e => setForm({...form, nome: e.target.value})} className=\"input-field\" required />
-                <input placeholder=\"Cognome\" value={form.cognome||''} onChange={e => setForm({...form, cognome: e.target.value})} className=\"input-field\" required />
-              </div>
-              <input placeholder=\"Email\" type=\"email\" value={form.email||''} onChange={e => setForm({...form, email: e.target.value})} className=\"input-field\" />
-              <input placeholder=\"Telefono\" value={form.telefono||''} onChange={e => setForm({...form, telefono: e.target.value})} className=\"input-field\" />
-              <input placeholder=\"Indirizzo\" value={form.indirizzo||''} onChange={e => setForm({...form, indirizzo: e.target.value})} className=\"input-field\" />
-              <input placeholder=\"AUM\" type=\"number\" step=\"0.01\" value={form.aum||''} onChange={e => setForm({...form, aum: e.target.value})} className=\"input-field\" />
-              <textarea placeholder=\"Note\" value={form.note||''} onChange={e => setForm({...form, note: e.target.value})} className=\"input-field\" rows={4} />
-              <button type=\"submit\" className=\"btn-primary\">Salva modifiche</button>
-            </form>
-          ) : (
-            <div className=\"space-y-3\">
-              <div><span className=\"text-gray-500\">Nome:</span> <span className=\"font-medium\">{cliente.nome} {cliente.cognome}</span></div>
-              <div><span className=\"text-gray-500\">Email:</span> <span className=\"font-medium\">{cliente.email}</span></div>
-              <div><span className=\"text-gray-500\">Telefono:</span> <span className=\"font-medium\">{cliente.telefono}</span></div>
-              <div><span className=\"text-gray-500\">Indirizzo:</span> <span className=\"font-medium\">{cliente.indirizzo || 'N/A'}</span></div>
-              <div><span className=\"text-gray-500\">AUM:</span> <span className=\"font-medium\">{cliente.aum ? `€${parseFloat(cliente.aum).toLocaleString()}` : 'N/A'}</span></div>
-              <div><span className=\"text-gray-500\">Note:</span> <span className=\"font-medium\">{cliente.note || 'Nessuna'}</span></div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'documenti' && (
-        <div className=\"card\">
-          <p className=\"text-gray-400\">Nessun documento caricato</p>
-          <button className=\"btn-primary mt-4\">Carica documento</button>
-        </div>
-      )}
+    <div className="p-8">
+      <button onClick={() => navigate('/clienti')} className="p-2 hover:bg-gray-100 rounded-lg">
+        <ArrowLeftIcon className="w-5 h-5" />
+      </button>
+      <h1 className="text-2xl font-bold mt-4">{cliente.nome} {cliente.cognome}</h1>
+      <p>{cliente.email}</p>
     </div>
   )
 }
