@@ -114,4 +114,28 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 })
 
+    // GET /api/clienti/:id/note - Ottieni le note di un cliente
+router.get('/:id/note', authMiddleware, async (req, res) => {
+  try {
+    const c = await Cliente.findOne({ where: { id: req.params.id, userId: req.user.id } })
+    if (!c) return res.status(404).json({ message: 'Cliente non trovato' })
+    res.json({ note: c.note || '' })
+  } catch {
+    res.status(500).json({ message: 'Errore nel caricamento delle note' })
+  }
+})
+
+// PUT /api/clienti/:id/note - Aggiorna le note di un cliente
+router.put('/:id/note', authMiddleware, async (req, res) => {
+  try {
+    const c = await Cliente.findOne({ where: { id: req.params.id, userId: req.user.id } })
+    if (!c) return res.status(404).json({ message: 'Cliente non trovato' })
+    await c.update({ note: req.body.note })
+    res.json({ note: c.note })
+  } catch {
+    res.status(500).json({ message: 'Errore nell\'aggiornamento delle note' })
+  }
+})
+
+
 export default router
