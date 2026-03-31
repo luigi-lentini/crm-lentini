@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { PlusIcon, PencilIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 
 const FASI = ['contatto', 'proposta', 'negoziazione', 'chiusa_vinta', 'chiusa_persa']
 
@@ -53,6 +53,17 @@ export default function Trattative() {
     setShowForm(true)
   }
 
+  const handleDelete = async (id) => {
+    if (!window.confirm('Sei sicuro di voler eliminare questa trattativa?')) return
+    try {
+      await axios.delete(`/api/trattative/${id}`, { headers })
+      toast.success('Trattativa eliminata!')
+      fetchTrattative()
+    } catch {
+      toast.error('Errore nell\'eliminazione')
+    }
+  }
+
   const faseColor = (fase) => ({
     contatto: 'bg-blue-100 text-blue-700',
     proposta: 'bg-yellow-100 text-yellow-700',
@@ -62,60 +73,102 @@ export default function Trattative() {
   }[fase] || 'bg-gray-100 text-gray-700')
 
   return (
-    <div className="p-8">
+    <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Trattative</h2>
+        <h1 className="text-2xl font-bold">Trattative</h1>
         <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
-          <PlusIcon className="w-4 h-4" /> Nuova Trattativa
+          <PlusIcon className="h-5 w-5" />
+          Nuova Trattativa
         </button>
       </div>
-      {loading ? <p className="text-gray-400">Caricamento...</p> : (
-        <div className="card overflow-hidden p-0">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Titolo</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Valore</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Fase</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Azioni</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {trattative.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400">Nessuna trattativa</td></tr>
-              ) : trattative.map(t => (
-                <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 font-medium">{t.titolo}</td>
-                  <td className="px-6 py-4 text-gray-500">{t.valore ? `€ ${Number(t.valore).toLocaleString('it-IT')}` : '-'}</td>
-                  <td className="px-6 py-4">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${faseColor(t.fase)}`}>
-                      {t.fase?.replace(/_/g, ' ')}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button onClick={() => handleEdit(t)} className="text-blue-600 hover:text-blue-800">
-                      <PencilIcon className="w-5 h-5" />
-                    </button>
-                  </td>
+
+      {loading ? (
+        <div className="text-center py-8">Caricamento...</div>
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {trattative.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">Nessuna trattativa presente</div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Titolo</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valore</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fase</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Azioni</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {trattative.map(t => (
+                  <tr key={t.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">{t.titolo}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {t.valore ? `€ ${Number(t.valore).toLocaleString('it-IT')}` : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs rounded-full ${faseColor(t.fase)}`}>
+                        {t.fase?.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex gap-2">
+                        <button onClick={() => handleEdit(t)} className="text-blue-600 hover:text-blue-800">
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button onClick={() => handleDelete(t.id)} className="text-red-600 hover:text-red-800">
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
+
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">{editingId ? 'Modifica Trattativa' : 'Nuova Trattativa'}</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4">{editingId ? 'Modifica Trattativa' : 'Nuova Trattativa'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <input placeholder="Titolo" value={form.titolo} onChange={e => setForm({...form, titolo: e.target.value})} className="input-field" required />
-              <input placeholder="Valore (EUR)" type="number" value={form.valore} onChange={e => setForm({...form, valore: e.target.value})} className="input-field" />
-              <select value={form.fase} onChange={e => setForm({...form, fase: e.target.value})} className="input-field">
+              <input
+                placeholder="Titolo"
+                value={form.titolo}
+                onChange={e => setForm({...form, titolo: e.target.value})}
+                className="input-field"
+                required
+              />
+              <input
+                placeholder="Valore (EUR)"
+                type="number"
+                value={form.valore}
+                onChange={e => setForm({...form, valore: e.target.value})}
+                className="input-field"
+              />
+              <select
+                value={form.fase}
+                onChange={e => setForm({...form, fase: e.target.value})}
+                className="input-field"
+              >
                 {FASI.map(f => <option key={f} value={f}>{f.replace(/_/g, ' ')}</option>)}
               </select>
-              <textarea placeholder="Note" value={form.note} onChange={e => setForm({...form, note: e.target.value})} className="input-field" rows={3} />
+              <textarea
+                placeholder="Note"
+                value={form.note}
+                onChange={e => setForm({...form, note: e.target.value})}
+                className="input-field"
+                rows={3}
+              />
               <div className="flex gap-3 justify-end">
-                <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setForm({ titolo: '', valore: '', fase: 'contatto', note: '' }) }} className="btn-secondary">Annulla</button>
+                <button
+                  type="button"
+                  onClick={() => { setShowForm(false); setEditingId(null); setForm({ titolo: '', valore: '', fase: 'contatto', note: '' }) }}
+                  className="btn-secondary"
+                >
+                  Annulla
+                </button>
                 <button type="submit" className="btn-primary">Salva</button>
               </div>
             </form>
