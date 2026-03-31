@@ -1,7 +1,7 @@
 import express from 'express'
 import { sequelize } from '../db.js'
 import { DataTypes } from 'sequelize'
-import authMiddleware from '../middleware/auth.js'
+import { authMiddleware } from './auth.js'
 
 const router = express.Router()
 
