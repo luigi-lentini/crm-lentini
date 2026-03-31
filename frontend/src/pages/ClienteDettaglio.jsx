@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, PencilIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 
 export default function ClienteDettaglio() {
@@ -14,6 +14,8 @@ export default function ClienteDettaglio() {
   const [attivita, setAttivita] = useState([])
   const [trattative, setTrattative] = useState([])
   const [progetti, setProgetti] = useState([])
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({ nome: '', cognome: '', email: '', telefono: '' })
 
   const token = localStorage.getItem('token')
   const headers = { Authorization: `Bearer ${token}` }
@@ -30,6 +32,7 @@ export default function ClienteDettaglio() {
     try {
       const { data } = await axios.get(`/api/clienti/${id}`, { headers })
       setCliente(data)
+      setEditForm({ nome: data.nome, cognome: data.cognome, email: data.email, telefono: data.telefono })
     } catch {
       toast.error('Errore nel caricamento')
       navigate('/clienti')
@@ -72,6 +75,24 @@ export default function ClienteDettaglio() {
       toast.success('Note salvate')
     } catch {
       toast.error('Errore nel salvataggio')
+    }
+  }
+
+  const handleEditToggle = () => {
+    if (editing) {
+      setEditForm({ nome: cliente.nome, cognome: cliente.cognome, email: cliente.email, telefono: cliente.telefono })
+    }
+    setEditing(!editing)
+  }
+
+  const handleSaveInfo = async () => {
+    try {
+      await axios.put(`/api/clienti/${id}`, editForm, { headers })
+      toast.success('Informazioni aggiornate!')
+      setEditing(false)
+      loadCliente()
+    } catch {
+      toast.error('Errore nell\'aggiornamento')
     }
   }
 
@@ -143,21 +164,74 @@ export default function ClienteDettaglio() {
         <div className="p-6">
           {activeTab === 'info' && (
             <div className="space-y-4">
+              <div className="flex justify-end mb-4">
+                {editing ? (
+                  <div className="flex gap-2">
+                    <button onClick={handleEditToggle} className="text-gray-600 hover:text-gray-900 px-3 py-1 border rounded">
+                      Annulla
+                    </button>
+                    <button onClick={handleSaveInfo} className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
+                      Salva
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={handleEditToggle} className="flex items-center text-blue-600 hover:text-blue-800">
+                    <PencilIcon className="h-5 w-5 mr-1" />
+                    Modifica
+                  </button>
+                )}
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Nome</label>
-                <p className="mt-1 text-gray-900">{cliente.nome}</p>
+                {editing ? (
+                  <input
+                    type="text"
+                    value={editForm.nome}
+                    onChange={(e) => setEditForm({...editForm, nome: e.target.value})}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+                  />
+                ) : (
+                  <p className="mt-1 text-gray-900">{cliente.nome}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Cognome</label>
-                <p className="mt-1 text-gray-900">{cliente.cognome}</p>
+                {editing ? (
+                  <input
+                    type="text"
+                    value={editForm.cognome}
+                    onChange={(e) => setEditForm({...editForm, cognome: e.target.value})}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+                  />
+                ) : (
+                  <p className="mt-1 text-gray-900">{cliente.cognome}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Email</label>
-                <p className="mt-1 text-gray-900">{cliente.email}</p>
+                {editing ? (
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+                  />
+                ) : (
+                  <p className="mt-1 text-gray-900">{cliente.email}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Telefono</label>
-                <p className="mt-1 text-gray-900">{cliente.telefono}</p>
+                {editing ? (
+                  <input
+                    type="text"
+                    value={editForm.telefono}
+                    onChange={(e) => setEditForm({...editForm, telefono: e.target.value})}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+                  />
+                ) : (
+                  <p className="mt-1 text-gray-900">{cliente.telefono}</p>
+                )}
               </div>
             </div>
           )}
