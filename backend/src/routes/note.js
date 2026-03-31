@@ -1,10 +1,9 @@
-const express = require('express')
-const router = express.Router()
-const { sequelize } = require('../db')
-const { DataTypes } = require('sequelize')
+import express from 'express'
+import { sequelize } from '../db.js'
+import { DataTypes } from 'sequelize'
+import authMiddleware from '../middleware/auth.js'
 
-// Middleware autenticazione
-const authMiddleware = require('../middleware/auth')
+const router = express.Router()
 
 // Modello Note
 const Nota = sequelize.define('Nota', {
@@ -12,7 +11,7 @@ const Nota = sequelize.define('Nota', {
   cliente_id: { type: DataTypes.INTEGER, allowNull: false },
   user_id: { type: DataTypes.INTEGER, allowNull: false },
   testo: { type: DataTypes.TEXT, allowNull: false },
-  tipo: { type: DataTypes.STRING, defaultValue: 'generale' }, // generale, chiamata, email, incontro
+  tipo: { type: DataTypes.STRING, defaultValue: 'generale' },
   data: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, {
   tableName: 'note',
@@ -73,4 +72,4 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 })
 
-module.exports = router
+export default router
