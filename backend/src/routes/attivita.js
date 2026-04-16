@@ -1,5 +1,5 @@
 import express from 'express'
-import { DataTypes } from 'sequelize'
+import { DataTypes, Op } from 'sequelize'
 import { sequelize } from '../db.js'
 import { authMiddleware } from './auth.js'
 
@@ -10,14 +10,19 @@ const Attivita = sequelize.define('Attivita', {
   descrizione: { type: DataTypes.TEXT },
   scadenza: { type: DataTypes.DATEONLY },
   stato: { type: DataTypes.STRING, defaultValue: 'da_fare' },
-  userId: { type: DataTypes.INTEGER }
+  userId: { type: DataTypes.INTEGER },
+  clienteId: { type: DataTypes.INTEGER, allowNull: true }
 })
 
 Attivita.sync({ force: false })
 
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const attivita = await Attivita.findAll({ where: { userId: req.user.id }, order: [['scadenza', 'ASC']] })
+    const where = { userId: req.user.id }
+    if (req.query.clienteId) {
+      where.clienteId = parseInt(req.query.clienteId)
+    }
+    const attivita = await Attivita.findAll({ where, order: [['scadenza', 'ASC']] })
     res.json(attivita)
   } catch {
     res.status(500).json({ message: 'Errore nel caricamento' })
