@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://crm-lentini-backend.onrender.com'
+      baseURL: import.meta.env.VITE_API_URL || 'https://crm-lentini-backend-f84e.onrender.com'
 })
 
 // Request interceptor: aggiunge il token ad ogni richiesta
