@@ -12,4 +12,4 @@
   status = 200
 
 [context.production.environment]
-  VITE_API_URL = "https://crm-lentini-backend.onrender.com"
+    VITE_API_URL = "https://crm-lentini-backend-f84e.onrender.com"
